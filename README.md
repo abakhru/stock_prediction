@@ -1,4 +1,4 @@
-### LSTM model based stock price prediction
+### Machine Learning based stock price prediction
 
 ### setup
 ```
@@ -9,6 +9,9 @@ pip install -e .
 ```
 
 ### TODO
-[ ] REST interface
-[ ] cli support for different options
-[ ] 
+- [ ] Try different algorithms
+- [ ] Try different models
+- [ ] Better prediction accuracy
+- [ ] REST interface
+- [ ] cli support for different stock name, algo version
+
