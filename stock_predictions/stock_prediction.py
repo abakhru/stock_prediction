@@ -13,6 +13,8 @@ LSTM: Long Short Term Memory cells are like mini neural networks designed to all
 """
 import json
 import logging
+
+import click
 import math
 from datetime import datetime
 from pathlib import Path
@@ -32,11 +34,12 @@ from tensorflow import optimizers
 from tensorflow.python.keras.models import Model, model_from_json
 from tensorflow.python.keras.utils.vis_utils import plot_model
 
-from stock_predictions.logger import LOGGER
+from stock_predictions.logger import LOGGER, pretty_print_df
 
 logging.getLogger('matplotlib.font_manager').setLevel('ERROR')
 logging.getLogger('urllib3.connectionpool').setLevel('ERROR')
 ALPHA_VANTAGE_APIKEY = 'S9XC819851W24M08'
+TODAY_DATE = datetime.now().strftime("%Y-%m-%d")
 
 
 class StockPricePrediction:
@@ -119,7 +122,7 @@ class StockPricePrediction:
         plt.show()
 
     @staticmethod
-    def visulize_price_history(data_frame):
+    def visualize_price_history(data_frame):
         # Visualize the closing price history
         plt.figure(figsize=(16, 8))
         plt.title('Close Price History')
@@ -128,7 +131,7 @@ class StockPricePrediction:
         plt.ylabel('Close Price USD ($)', fontsize=18)
         plt.show()
 
-    def predict_price_v1(self):
+    def predict_price_v1(self, epochs=50):
         """
         # Description: This program uses an artificial recurrent neural network called
         Long Short Term Memory (LSTM) to predict the closing stock price of a stock
@@ -141,7 +144,7 @@ class StockPricePrediction:
                                           start=self.start_date, end=self.end_date)
         LOGGER.info(f"\n==== Stock price data for '{self.stock_symbol}' ===="
                     f"\n{tabulate(df[:10], headers='keys', tablefmt='sql')}")
-        # self.visulize_price_history(df)
+        # self.visualize_price_history(df)
         # Create a new dataframe with only the 'Close' column
         data = df.filter(['Close'])
         # Converting the dataframe to a numpy array
@@ -182,7 +185,7 @@ class StockPricePrediction:
                                optimizer='rmsprop',
                                metrics=['accuracy'])
             LOGGER.info('Staring model training based on last 60 days price dataset ...')
-            self.model.fit(x_train, y_train, batch_size=1, epochs=50, shuffle=True)
+            self.model.fit(x_train, y_train, batch_size=1, epochs=epochs, shuffle=True)
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
         self.model.summary()
@@ -267,7 +270,7 @@ class StockPricePrediction:
                 next_day_open_values,
                 y_normaliser)
 
-    def predict_price_v2(self, history_points=50):
+    def predict_price_v2(self, epochs=50, history_points=50):
         """
         # Description: This program uses an artificial recurrent neural network called
         Long Short Term Memory (LSTM) to predict the closing stock price of a stock
@@ -278,11 +281,11 @@ class StockPricePrediction:
         # df = pandas_datareader.DataReader(name=self.stock_symbol,
         #                                   data_source='yahoo',
         #                                   start=self.start_date, end=self.end_date)
-        (ohlcv_histories, next_day_open_values, unscaled_y, y_normaliser) = self.csv_to_dataset(
-                history_points=history_points)
+        (ohlcv_histories, next_day_open_values,
+         unscaled_y, y_normaliser) = self.csv_to_dataset(history_points=history_points)
 
-        LOGGER.info(f"\n==== Stock price data for '{self.stock_symbol}' ===="
-                    f"\n{tabulate(ohlcv_histories[:10], headers='keys', tablefmt='sql')}")
+        # LOGGER.info(f"\n==== Stock price data for '{self.stock_symbol}' ===="
+        #             f"\n{tabulate(ohlcv_histories[:10], headers='keys', tablefmt='sql')}")
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -334,11 +337,11 @@ class StockPricePrediction:
         self.model.fit(x=ohlcv_train,
                        y=y_train,
                        batch_size=32,
-                       epochs=50,
+                       epochs=epochs,
                        shuffle=True,
                        validation_split=0.1)
         scores = self.model.evaluate(ohlcv_test, y_test)
-        LOGGER.debug(f'Scores: {scores}')
+        # LOGGER.debug(f'Scores: {scores}')
 
         y_test_predicted = self.model.predict(ohlcv_test)
         y_test_predicted = y_normaliser.inverse_transform(y_test_predicted)
@@ -362,18 +365,18 @@ class StockPricePrediction:
         stock_quote = pandas_datareader.DataReader(self.stock_symbol,
                                                    data_source='yahoo',
                                                    start=self.start_date,
-                                                   end='2019-12-17')
+                                                   end=end_date)
         # Create a new dataframe
         new_df = stock_quote.filter(['Close'])
-        # Get teh last 60 day closing price
+        # Get thh last 60 day closing price
         last_60_days = new_df[-60:].values
         # Scale the data to be values between 0 and 1
         last_60_days_scaled = self.data_normaliser.transform(last_60_days)
         # Create an empty list
         x_test = list()
-        # Append teh past 60 days
+        # Append the past 60 days
         x_test.append(last_60_days_scaled)
-        # Convert the X_test data set to a numpy array
+        # Convert the x_test data set to a numpy array
         x_test = np.array(x_test)
         # Reshape the data
         x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
@@ -381,19 +384,27 @@ class StockPricePrediction:
         pred_price = self.model.predict(x_test)
         # undo the scaling
         pred_price = self.data_normaliser.inverse_transform(pred_price)
-        apple_quote2 = pandas_datareader.DataReader(self.stock_symbol,
-                                                    data_source='yahoo',
-                                                    start=end_date,
-                                                    end=end_date)
+        pretty_print_df(pred_price)
         LOGGER.info(f"[{self.stock_symbol}:{end_date}] Predicted: Actual ==> "
-                    f"{pred_price[0][0]}: {apple_quote2['Close'][0]}")
+                    f"{pred_price[0][0]}: {last_60_days['Close'][0]}")
+
+
+@click.command()
+@click.option('-s', '--stock', default='FB', help='Stock name for prediction')
+@click.option('-e', '--epochs', default=50, help='Number of times to train the model')
+@click.option('--v1', is_flag=True, default=True, help='Build and use the v1 model')
+@click.option('--v2', is_flag=True, default=False, help='Build and use the v2 model')
+def main(stock, epochs, v1, v2):
+    p = StockPricePrediction(stock_symbol=stock,
+                             start_date='2012-01-01',
+                             end_date='2019-12-17')
+    # p.plot_moving_avg(stock_symbol=stock, n_forward=40)
+    if v1:
+        p.predict_price_v1(epochs=epochs)
+    if v2:
+        p.predict_price_v2(epochs=epochs)
+    p.test_prediction(end_date=TODAY_DATE)
 
 
 if __name__ == '__main__':
-    p = StockPricePrediction(stock_symbol='FB',
-                             start_date='2012-01-01',
-                             end_date='2019-12-17')
-    # p.plot_moving_avg(stock_symbol='SPCE', n_forward=40)
-    p.predict_price_v1()
-    # p.predict_price_v2()
-    p.test_prediction(end_date='2020-06-25')
+    main()
