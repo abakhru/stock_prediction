@@ -9,9 +9,8 @@ pip install -e .
 ```
 
 ### TODO
+- [x] cli support for different stock name, algo version
 - [ ] Try different algorithms
 - [ ] Try different models
 - [ ] Better prediction accuracy
 - [ ] REST interface
-- [ ] cli support for different stock name, algo version
-

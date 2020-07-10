@@ -1,7 +1,6 @@
 import logging
 
 from colorlog import ColoredFormatter
-from tabulate import tabulate
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +14,3 @@ stream.setFormatter(ColoredFormatter(LOG_FORMAT))
 logging.basicConfig(handlers=[stream])
 
 LOGGER.setLevel('DEBUG')
-
-
-def pretty_print_df(df):
-    print(tabulate(df, headers='keys', tablefmt='psql'))
