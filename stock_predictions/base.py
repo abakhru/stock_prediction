@@ -13,16 +13,14 @@ LSTM: Long Short Term Memory cells are like mini neural networks designed to all
 """
 import json
 from datetime import datetime
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas_datareader
 import yfinance
 from scipy.stats import ttest_ind
 from sklearn.preprocessing import MinMaxScaler
 
-from stock_predictions import TODAY_DATE
+from stock_predictions import ROOT, TODAY_DATE
 from stock_predictions.data_utils import DataUtils
 from stock_predictions.logger import LOGGER
 from stock_predictions.utils import pretty_print_df
@@ -38,8 +36,8 @@ class StockPricePrediction(DataUtils):
         self.end_date = end_date
         self.model = None
         self.data_normaliser = MinMaxScaler()
-        self.model_dir = Path(__file__).parent.parent.resolve() / 'models'
-        self.data_dir = self.model_dir.parent.joinpath('data')
+        self.model_dir = ROOT / 'models'
+        self.data_dir = ROOT / 'data'
         self.model_dir.mkdir(exist_ok=True)
         self.data_dir.mkdir(exist_ok=True)
         self.json_model_path = self.model_dir.joinpath(f'{self.stock_symbol.lower()}_'
@@ -102,10 +100,7 @@ class StockPricePrediction(DataUtils):
     def test_prediction(self, end_date='2019-12-18'):
         LOGGER.info('\n==== Testing the prediction Model ====')
         # Get the quote
-        stock_quote = pandas_datareader.DataReader(self.stock_symbol,
-                                                   data_source='yahoo',
-                                                   start=self.start_date,
-                                                   end=end_date)
+        stock_quote = self.get_yahoo_stock_data(self.stock_symbol, self.start_date, self.end_date)
         # Create a new dataframe
         new_df = stock_quote.filter(['Close'])
         # Get thh last 60 day closing price

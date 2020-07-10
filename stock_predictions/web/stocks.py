@@ -1,14 +1,19 @@
+#!/usr/bin/env python
+
 import datetime
 import math
-import os
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import requests
 import yfinance as yf
 from lxml import html
 from ratelimit import limits
 
+from stock_predictions import ROOT, TODAY_DATE
+from stock_predictions.logger import LOGGER
+from stock_predictions.utils import pretty_print_df
 from stock_predictions.web.template import template
 
 firstDate = "2019-04-01"
@@ -47,11 +52,19 @@ def get_bankruptcy_probability(symbol):
 
 @limits(calls=1, period=1)  # slow down for rate limiting
 def get_all_stocks_data():
-    data = yf.download(stock_symbols, start=firstDate, end=endDate)
+    data_csv_path = ROOT.joinpath('data', f'stocks_data_{TODAY_DATE}.csv')
+    if data_csv_path.exists():
+        data = pd.read_csv(data_csv_path)
+    else:
+        LOGGER.info('Downloading all stocks values')
+        # data = yf.download(tickers=stock_symbols, start=firstDate, end=endDate)
+        data = yf.download(tickers='FB', start=firstDate, end=endDate)
+        data.to_csv(data_csv_path)
+    pretty_print_df(data)
     return data
 
 
-results_file_name = Path(__file__).parent.resolve().joinpath('docs/index.html')
+results_file_name = Path(__file__).parent.resolve().joinpath('docs', 'index.html')
 if results_file_name.exists():
     results_file_name.unlink()
 
@@ -70,23 +83,20 @@ for stock_symbol in stock_symbols.split():
 
 stock_results.sort(key=lambda x: x.second_percentage_movement)
 
-heading = ''
+heading = (f'<h1>Diff generated at '
+           f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} UTC</h1> \n')
 tableBody = ''
-
-with open(results_file_name, "a") as results_file:
-    heading += ('<h1>Diff generated at {} UTC</h1> \n'.format(
-        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
 for result in stock_results:
     first_percentage_movementClass = 'positive-movement' if (
-                result.first_percentage_movement > 0) else 'negative-movement'
+            result.first_percentage_movement > 0) else 'negative-movement'
     second_percentage_movementClass = 'positive-movement' if (
-                result.second_percentage_movement > 0) else 'negative-movement'
+            result.second_percentage_movement > 0) else 'negative-movement'
     categoriesClasses = 'blue-category' if (result.stock_symbol in blueCategory) else ''
 
     tableBody += "<tr class='{}'> \n".format(categoriesClasses)
     tableBody += '<td><button onclick="renderChart(`{}`)">{}</button></td> \n'.format(
-        result.stock_symbol, result.stock_symbol)
+            result.stock_symbol, result.stock_symbol)
     tableBody += "<td>{}$</td> \n".format(result.first_price)
     tableBody += "<td>{}$</td> \n".format(result.second_price)
     tableBody += "<td>{}$</td> \n".format(result.current_price)

@@ -6,7 +6,8 @@ LOGGER = logging.getLogger(__name__)
 
 LOG_FORMAT = ('%(asctime)s '
               '%(log_color)s'
-              '%(process)d %(name)s %(levelname)s | %(pathname)s:%(lineno)s | '
+              '%(process)d %(filename)s:%(lineno)s '
+              '%(levelname)s | '
               '%(reset)s'
               '%(log_color)s%(message)s%(reset)s')
 stream = logging.StreamHandler()

@@ -2,10 +2,8 @@
 
 ### setup
 ```
-python3 -m venv env
-. env/bin/activate
-pip install -U pip setuptools wheel
-pip install -e .
+./quick_start.sh
+python stock_predictions/main.py -s TSLA -e 5 --v1
 ```
 
 ### TODO

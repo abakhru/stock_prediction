@@ -2,7 +2,6 @@
 
 import click
 
-from stock_predictions import TODAY_DATE
 from stock_predictions.v1 import StockPredictionV1
 from stock_predictions.v2 import StockPredictionV2
 
@@ -16,14 +15,13 @@ def main(stock, epochs, v1, v2):
     # p.plot_moving_avg(stock_symbol=stock, n_forward=40)
     if v1:
         p = StockPredictionV1(stock_symbol=stock,
-                              start_date='2012-01-01',
-                              end_date='2019-12-17')
-        p.predict_price_v1(epochs=epochs)
-        p.test_prediction(end_date=TODAY_DATE)
+                              start_date='2012-01-01')
+        p.predict_price_v1(epochs=epochs, number_of_days=600)
+        p.find_accuracy()
+        # p.test_prediction(end_date=TODAY_DATE)
     if v2:
         p = StockPredictionV2(stock_symbol=stock,
-                              start_date='2012-01-01',
-                              end_date='2019-12-17')
+                              start_date='2012-01-01')
         p.predict_price_v2(epochs=epochs)
 
 
