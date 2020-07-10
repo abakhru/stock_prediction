@@ -26,7 +26,7 @@ class StockPredictionV2(StockPricePrediction):
         if csv_path is None:
             csv_path = self.data_dir / f'{self.stock_symbol}_daily.csv'
         if not csv_path.exists():
-            self.save_dataset(self.stock_symbol, csv_path)
+            self.alpha_vantage_get_dataset(self.stock_symbol, csv_path)
         data = pd.read_csv(csv_path)
         data = data.drop('date', axis=1)
         data = data.drop(0, axis=0)
@@ -64,17 +64,9 @@ class StockPredictionV2(StockPricePrediction):
         # Description: This program uses an artificial recurrent neural network called
         Long Short Term Memory (LSTM) to predict the closing stock price of a stock
         using the past 60 day stock price.
-
-        :return:
         """
-        # df = pandas_datareader.DataReader(name=self.stock_symbol,
-        #                                   data_source='yahoo',
-        #                                   start=self.start_date, end=self.end_date)
         (ohlcv_histories, next_day_open_values,
          unscaled_y, y_normaliser) = self.csv_to_dataset(history_points=history_points)
-
-        # LOGGER.info(f"\n==== Stock price data for '{self.stock_symbol}' ===="
-        #             f"\n{tabulate(ohlcv_histories[:10], headers='keys', tablefmt='sql')}")
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -125,6 +117,8 @@ class StockPredictionV2(StockPricePrediction):
         scaled_mse = real_mse / (np.max(unscaled_y_test) - np.min(unscaled_y_test)) * 100
         LOGGER.info(scaled_mse)
         plt.gcf().set_size_inches(22, 15, forward=True)
+        plt.xlabel('Date', fontsize=18)
+        plt.ylabel('Close Price USD ($)', fontsize=18)
         plt.plot(unscaled_y_test[0:-1], label='real')
         plt.plot(y_test_predicted[0:-1], label='predicted')
         plt.legend(['Real', 'Predicted'])

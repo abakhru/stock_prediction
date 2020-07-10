@@ -17,3 +17,5 @@ alpha_vantage
 matplotlib
 tabulate
 colorlog
+ratelimit
+mplfinance
