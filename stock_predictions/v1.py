@@ -7,7 +7,6 @@ import numpy as np
 import pandas_datareader
 from keras.layers import Dense, LSTM
 from keras.models import Sequential
-from sklearn.preprocessing import MinMaxScaler
 from tabulate import tabulate
 from tensorflow.python.keras.models import model_from_json
 from tensorflow.python.keras.utils.vis_utils import plot_model
@@ -22,6 +21,8 @@ class StockPredictionV1(StockPricePrediction):
                  start_date="2010-01-01",
                  end_date=datetime.now().strftime("%Y-%m-%d")):
         super().__init__(stock_symbol, start_date, end_date)
+        self.json_model_path = self.json_model_path.with_suffix('.v1.json')
+        self.model_file_path = self.json_model_path.with_suffix('.v1.h5')
 
     def predict_price_v1(self, epochs=50):
         """
@@ -44,7 +45,7 @@ class StockPredictionV1(StockPricePrediction):
         # Get /Compute the number of rows to train the model on
         training_data_len = math.ceil(len(dataset) * .8)
         # Scale the all of the data to be values between 0 and 1
-        self.data_normaliser = MinMaxScaler(feature_range=(0, 1))
+        # self.data_normaliser = MinMaxScaler(feature_range=(0, 1))
         data_normalised = self.data_normaliser.fit_transform(dataset)
         # Create the scaled training data set
         train_data = data_normalised[0:training_data_len, :]
@@ -76,6 +77,9 @@ class StockPredictionV1(StockPricePrediction):
             self.model.compile(loss='binary_crossentropy',
                                optimizer='rmsprop',
                                metrics=['accuracy'])
+            # self.model.compile(optimizer='adam',
+            #                    loss='mean_squared_error',
+            #                    metrics=['accuracy'])
             LOGGER.info('Staring model training based on last 60 days price dataset ...')
             self.model.fit(x_train, y_train, batch_size=1, epochs=epochs, shuffle=True)
             self.json_model_path.write_text(self.model.to_json())
@@ -121,4 +125,4 @@ class StockPredictionV1(StockPricePrediction):
         plt.plot(valid[['Close', 'Predictions']])
         plt.legend(['Train', 'Val', 'Predictions'], loc='lower right')
         # plt.show()
-        LOGGER.debug(f'Predicted Price:\n{valid[:5]}')
+        LOGGER.info(f'\n==== Predicted Price ====\n{valid[:-5]}')

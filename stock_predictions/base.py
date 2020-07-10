@@ -17,19 +17,18 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pandas_datareader
 import yfinance
-from alpha_vantage.timeseries import TimeSeries
 from scipy.stats import ttest_ind
 from sklearn.preprocessing import MinMaxScaler
 
-from stock_predictions import ALPHA_VANTAGE_APIKEY
+from stock_predictions import TODAY_DATE
+from stock_predictions.data_utils import DataUtils
 from stock_predictions.logger import LOGGER
 from stock_predictions.utils import pretty_print_df
 
 
-class StockPricePrediction:
+class StockPricePrediction(DataUtils):
 
     def __init__(self, stock_symbol='FB',
                  start_date="2010-01-01",
@@ -38,23 +37,15 @@ class StockPricePrediction:
         self.start_date = start_date
         self.end_date = end_date
         self.model = None
-        self.data_normaliser = None
-        self.json_model_path = Path('/tmp', f'{self.stock_symbol}_model.json')
-        self.model_file_path = Path('/tmp', f'{self.stock_symbol}_model.h5')
-
-    def save_dataset(self, csv_path):
-        """
-    1. open  2. high    3. low  4. close   5. volume
-1   360.700   365.00  357.5700    364.84  34380628.0
-2   365.000   368.79  358.5200    360.06  48155849.0
-3   364.000   372.38  362.2701    366.53  53038869.0
-4   351.340   359.46  351.1500    358.87  33861316.0
-5   354.635   356.56  345.1500    349.72  66118952.0
-        :return:
-        """
-        ts = TimeSeries(key=ALPHA_VANTAGE_APIKEY, output_format='pandas')
-        data, meta_data = ts.get_daily(self.stock_symbol, outputsize='full')
-        data.to_csv(csv_path)
+        self.data_normaliser = MinMaxScaler()
+        self.model_dir = Path(__file__).parent.parent.resolve() / 'models'
+        self.data_dir = self.model_dir.parent.joinpath('data')
+        self.model_dir.mkdir(exist_ok=True)
+        self.data_dir.mkdir(exist_ok=True)
+        self.json_model_path = self.model_dir.joinpath(f'{self.stock_symbol.lower()}_'
+                                                       f'{TODAY_DATE}_model.json')
+        self.model_file_path = self.model_dir.joinpath(f'{self.stock_symbol.lower()}_'
+                                                       f'{TODAY_DATE}_model.h5')
 
     def plot_moving_avg(self, n_forward=40):
         """Plats best moving average of the given stock symbol
@@ -108,47 +99,8 @@ class StockPricePrediction:
                   datetime.strptime(self.end_date, '%Y-%m-%d').date()))
         plt.show()
 
-    def csv_to_dataset(self, csv_path=None, history_points=50):
-        if csv_path is None:
-            csv_path = Path('/tmp', f'{self.stock_symbol}_daily.csv')
-        if not csv_path.exists():
-            self.save_dataset(csv_path)
-        data = pd.read_csv(csv_path)
-        data = data.drop('date', axis=1)
-        data = data.drop(0, axis=0)
-        data = data.values
-
-        data_normaliser = MinMaxScaler()
-        data_normalised = data_normaliser.fit_transform(data)
-
-        # using the last {history_points} open high low close volume data points,
-        # predict the next open value
-        temp = list()
-        for i in range(len(data_normalised) - history_points):
-            temp.append(data_normalised[i: i + history_points].copy())
-        ohlcv_histories_normalised = np.array(temp)
-
-        temp = list()
-        for i in range(len(data_normalised) - history_points):
-            temp.append(data_normalised[:, 0][i + history_points].copy())
-        next_day_open_values_normalised = np.array(temp)
-        next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
-
-        next_day_open_values = np.array(
-                [data[:, 0][i + history_points].copy() for i in range(len(data) - history_points)])
-        next_day_open_values = np.expand_dims(next_day_open_values, -1)
-
-        y_normaliser = MinMaxScaler()
-        y_normaliser.fit(next_day_open_values)
-
-        assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0]
-        return (ohlcv_histories_normalised,
-                next_day_open_values_normalised,
-                next_day_open_values,
-                y_normaliser)
-
     def test_prediction(self, end_date='2019-12-18'):
-        LOGGER.info('==== Testing the prediction Model ====')
+        LOGGER.info('\n==== Testing the prediction Model ====')
         # Get the quote
         stock_quote = pandas_datareader.DataReader(self.stock_symbol,
                                                    data_source='yahoo',
@@ -174,4 +126,4 @@ class StockPricePrediction:
         pred_price = self.data_normaliser.inverse_transform(pred_price)
         pretty_print_df(pred_price)
         LOGGER.info(f"[{self.stock_symbol}:{end_date}] Predicted: Actual ==> "
-                    f"{pred_price[0][0]}: {last_60_days['Close'][0]}")
+                    f"{pred_price[0][0]}: {last_60_days[-1][0]}")
