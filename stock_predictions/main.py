@@ -22,7 +22,9 @@ def main(stock, epochs, v1, v2):
     if v2:
         p = StockPredictionV2(stock_symbol=stock,
                               start_date='2012-01-01')
-        p.predict_price_v2(epochs=epochs, number_of_days=600)
+        # p.predict_price_v2(epochs=epochs, number_of_days=600)
+        # p.predict_price_v2_with_sma(epochs=epochs, number_of_days=600)
+        p.predict_price_v2_sma_mcad(epochs=epochs, number_of_days=60)
 
 
 if __name__ == '__main__':

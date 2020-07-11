@@ -92,7 +92,8 @@ class StockPredictionV1(StockPricePrediction):
         LOGGER.info("%s: %.2f%%" % (self.model.metrics_names[1], scores[1] * 100))
 
         # if you need to visualize the model layers
-        plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}")
+        plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}",
+                   show_shapes=True)
 
         # Test data set
         test_data = data_normalised[training_data_len - number_of_days:, :]
