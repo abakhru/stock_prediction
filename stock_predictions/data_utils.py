@@ -1,16 +1,20 @@
+import numpy as np
 import pandas as pd
 import pandas_datareader
 from alpha_vantage.timeseries import TimeSeries
+from sklearn.preprocessing import MinMaxScaler
 from tabulate import tabulate
 
 from stock_predictions import ALPHA_VANTAGE_APIKEY, ROOT, TODAY_DATE
 from stock_predictions.logger import LOGGER
+from stock_predictions.utils import pretty_print_df
 
 
 class DataUtils:
 
     def __init__(self):
         self.data_dir = ROOT.joinpath('data')
+        self.data_normaliser = MinMaxScaler()
 
     @staticmethod
     def alpha_vantage_get_dataset(stock_symbol, csv_path):
@@ -48,3 +52,147 @@ class DataUtils:
                     f"\n{tabulate(df[:5], headers='keys', tablefmt='sql')}")
         # self.visualize_price_history(df)
         return df
+
+    def xcsv_to_dataset(self, stock, number_of_days=60, with_tech_indicator=False):
+        csv_path = self.data_dir / f'{stock.lower()}_daily.csv'
+        if not csv_path.exists():
+            self.alpha_vantage_get_dataset(stock, csv_path)
+        data = pd.read_csv(csv_path)
+        data = data.drop('date', axis=1)
+        data = data.drop(0, axis=0)
+        data = data.values
+        data_normalised = self.data_normaliser.fit_transform(data)
+
+        # using the last {number_of_days} open high low close volume data points,
+        # predict the next open value
+        temp = list()
+        for i in range(len(data_normalised) - number_of_days):
+            temp.append(data_normalised[i: i + number_of_days].copy())
+        ohlcv_histories_normalised = np.array(temp)
+
+        temp = list()
+        for i in range(len(data_normalised) - number_of_days):
+            temp.append(data_normalised[:, 0][i + number_of_days].copy())
+        next_day_open_values_normalised = np.array(temp)
+        next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
+        next_day_open_values = np.array([data[:, 0][i + number_of_days].copy()
+                                         for i in range(len(data) - number_of_days)])
+        next_day_open_values = np.expand_dims(next_day_open_values, -1)
+
+        y_normaliser = MinMaxScaler()
+        y_normaliser.fit(next_day_open_values)
+        assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0]
+
+        ret_values = [ohlcv_histories_normalised,
+                      next_day_open_values_normalised,
+                      next_day_open_values,
+                      y_normaliser]
+
+        if with_tech_indicator:
+            technical_indicators = []
+            for his in ohlcv_histories_normalised:
+                # since we are using his[3] we are taking the SMA of the closing price
+                sma = np.mean(his[:, 3])
+                macd = self.calc_ema(his, 12) - self.calc_ema(his, 26)
+                technical_indicators.append(np.array([sma, macd]))
+            technical_indicators = np.array(technical_indicators)
+            technical_indicators_normalised = self.data_normaliser.fit_transform(
+                    technical_indicators)
+            assert ohlcv_histories_normalised.shape[0] == technical_indicators_normalised.shape[0]
+            ret_values.append(technical_indicators_normalised)
+            assert len(ret_values) == 5
+        LOGGER.info(f'Returning values len: {len(ret_values)}')
+        return tuple(ret_values)
+
+    def csv_to_dataset(self, csv_path, number_of_days=60, with_tech_indicator=False):
+        data = pd.read_csv(csv_path)
+        LOGGER.info(f'==== {csv_path.name} ====')
+        pretty_print_df(data.tail())
+        data = data.drop('date', axis=1)
+        data = data.drop(0, axis=0)
+        data = data.values
+        data_normalised = self.data_normaliser.fit_transform(data)
+
+        # using the last {number_of_days} open close high low volume data points,
+        # predict the next open value
+        ohlcv_histories_normalised = np.array([data_normalised[i:i + number_of_days].copy() for i in
+                                               range(len(data_normalised) - number_of_days)])
+        next_day_open_values_normalised = np.array(
+                [data_normalised[:, 0][i + number_of_days].copy() for i in
+                 range(len(data_normalised) - number_of_days)])
+        next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
+
+        next_day_open_values = np.array([data[:, 0][i + number_of_days].copy()
+                                         for i in range(len(data) - number_of_days)])
+        next_day_open_values = np.expand_dims(next_day_open_values, -1)
+
+        y_normaliser = MinMaxScaler()
+        y_normaliser.fit(next_day_open_values)
+
+        def calc_ema(values, time_period):
+            # https://www.investopedia.com/ask/answers/122314/what-exponential-moving-average-ema-formula-and-how-ema-calculated.asp
+            sma = np.mean(values[:, 3])
+            ema_values = [sma]
+            k = 2 / (1 + time_period)
+            for i in range(len(his) - time_period, len(his)):
+                close = his[i][3]
+                ema_values.append(close * k + ema_values[-1] * (1 - k))
+            return ema_values[-1]
+
+        ret_values = [ohlcv_histories_normalised,
+                      next_day_open_values_normalised,
+                      next_day_open_values,
+                      y_normaliser]
+
+        if with_tech_indicator:
+            technical_indicators = []
+            for his in ohlcv_histories_normalised:
+                # note since we are using his[3] we are taking the SMA of the closing price
+                sma = np.mean(his[:, 3])
+                macd = calc_ema(his, 12) - calc_ema(his, 26)
+                # technical_indicators.append(np.array([sma]))
+                technical_indicators.append(np.array([sma, macd]))
+
+            technical_indicators = np.array(technical_indicators)
+
+            tech_ind_scaler = MinMaxScaler()
+            technical_indicators_normalised = tech_ind_scaler.fit_transform(technical_indicators)
+
+            assert ohlcv_histories_normalised.shape[0] == technical_indicators_normalised.shape[0]
+            ret_values.append(technical_indicators_normalised)
+            assert len(ret_values) == 5
+        return ret_values
+
+    def multiple_csv_to_dataset(self, test_set_name, number_of_days=60):
+        ohlcv_histories = 0
+        technical_indicators = 0
+        next_day_open_values = 0
+        # for csv_file_path in list(filter(lambda x: x.endswith('daily.csv'), os.listdir('data'))):
+        for csv_file_path in list(self.data_dir.glob('*_daily.csv')):
+            # if not csv_file_path == test_set_name:
+            if csv_file_path.name == test_set_name:
+                LOGGER.debug(f'Processing ... {csv_file_path}')
+                if type(ohlcv_histories) == int:
+                    (ohlcv_histories, technical_indicators,
+                     next_day_open_values, _, _) = self.csv_to_dataset(csv_file_path)
+                else:
+                    a, b, c, _, _ = self.csv_to_dataset(csv_file_path)
+                    ohlcv_histories = np.concatenate((ohlcv_histories, a), 0)
+                    technical_indicators = np.concatenate((technical_indicators, b), 0)
+                    next_day_open_values = np.concatenate((next_day_open_values, c), 0)
+        ohlcv_train = ohlcv_histories
+        tech_ind_train = technical_indicators
+        y_train = next_day_open_values
+        (ohlcv_test, tech_ind_test, y_test,
+         unscaled_y_test, y_normaliser) = self.csv_to_dataset(self.data_dir.joinpath(test_set_name),
+                                                              number_of_days=number_of_days)
+        return (ohlcv_train, tech_ind_train, y_train, ohlcv_test,
+                tech_ind_test, y_test, unscaled_y_test, y_normaliser)
+
+
+if __name__ == '__main__':
+    p = DataUtils()
+    # p.csv_to_dataset(stock='TSLA', number_of_days=60)
+    # p.multiple_csv_to_dataset(test_set_name=['FB', 'AAPL', 'MSFT', 'AMZN', 'GOOGL'],
+    p.multiple_csv_to_dataset(test_set_name='TSLA_daily.csv',
+                              number_of_days=60)

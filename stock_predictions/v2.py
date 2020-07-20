@@ -8,9 +8,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from keras.layers import Activation, Dense, Dropout, Input, LSTM, concatenate
-from sklearn.preprocessing import MinMaxScaler
 from tensorflow import optimizers
 from tensorflow.python import set_random_seed
 from tensorflow.python.keras.models import Model, model_from_json
@@ -27,73 +25,26 @@ class StockPredictionV2(StockPricePrediction):
 
     def __init__(self, stock_symbol='FB',
                  start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d")):
+                 end_date=datetime.now().strftime("%Y-%m-%d"),
+                 reset=False):
         super().__init__(stock_symbol, start_date, end_date)
         self.json_model_path = self.json_model_path.with_suffix('.v2.json')
         self.model_file_path = self.json_model_path.with_suffix('.v2.h5')
+        if reset:
+            LOGGER.debug('Deleting all model related files')
+            self.model_file_path.unlink(missing_ok=True)
+            self.json_model_path.unlink(missing_ok=True)
 
-    def csv_to_dataset(self, csv_path=None, number_of_days=60, with_tech_indicator=False):
-        if csv_path is None:
-            csv_path = self.data_dir / f'{self.stock_symbol}_daily.csv'
-        if not csv_path.exists():
-            self.alpha_vantage_get_dataset(self.stock_symbol, csv_path)
-        data = pd.read_csv(csv_path)
-        data = data.drop('date', axis=1)
-        data = data.drop(0, axis=0)
-        data = data.values
-        data_normalised = self.data_normaliser.fit_transform(data)
-
-        # using the last {number_of_days} open high low close volume data points,
-        # predict the next open value
-        temp = list()
-        for i in range(len(data_normalised) - number_of_days):
-            temp.append(data_normalised[i: i + number_of_days].copy())
-        ohlcv_histories_normalised = np.array(temp)
-
-        temp = list()
-        for i in range(len(data_normalised) - number_of_days):
-            temp.append(data_normalised[:, 0][i + number_of_days].copy())
-        next_day_open_values_normalised = np.array(temp)
-        next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
-        next_day_open_values = np.array([data[:, 0][i + number_of_days].copy()
-                                         for i in range(len(data) - number_of_days)])
-        next_day_open_values = np.expand_dims(next_day_open_values, -1)
-
-        y_normaliser = MinMaxScaler()
-        y_normaliser.fit(next_day_open_values)
-        assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0]
-
-        ret_values = [ohlcv_histories_normalised,
-                      next_day_open_values_normalised,
-                      next_day_open_values,
-                      y_normaliser]
-
-        if with_tech_indicator:
-            technical_indicators = []
-            for his in ohlcv_histories_normalised:
-                # since we are using his[3] we are taking the SMA of the closing price
-                sma = np.mean(his[:, 3])
-                macd = self.calc_ema(his, 12) - self.calc_ema(his, 26)
-                technical_indicators.append(np.array([sma, macd]))
-
-            technical_indicators = np.array(technical_indicators)
-            tech_ind_scaler = MinMaxScaler()
-            technical_indicators_normalised = tech_ind_scaler.fit_transform(technical_indicators)
-            assert (ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0]
-                    == technical_indicators_normalised.shape[0])
-            ret_values.append(technical_indicators_normalised)
-            assert len(ret_values) == 5
-        LOGGER.info(f'Returning values len: {len(ret_values)}')
-        return tuple(ret_values)
-
-    def predict_price_v2(self, epochs=50, number_of_days=50):
+    def basic_model(self, epochs=50, number_of_days=50):
         """
         # Description: This program uses an artificial recurrent neural network called
         Long Short Term Memory (LSTM) to predict the closing stock price of a stock
         using the past 60 day stock price.
         """
         (ohlcv_histories, next_day_open_values,
-         unscaled_y, y_normaliser) = self.csv_to_dataset(number_of_days=number_of_days)
+         unscaled_y, y_normaliser) = self.csv_to_dataset(
+            csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
+            number_of_days=number_of_days)
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -155,13 +106,15 @@ class StockPredictionV2(StockPricePrediction):
         plt.legend(['Real', 'Predicted'])
         plt.show()
 
-    def predict_price_v2_with_sma(self, epochs=50, number_of_days=50):
+    def model_with_sma_only(self, epochs=50, number_of_days=50):
         """
         includes SMA (Standard Moving Average technical indicator
         """
         (ohlcv_histories, next_day_open_values, unscaled_y,
-         y_normaliser, technical_indicators) = self.csv_to_dataset(number_of_days=number_of_days,
-                                                                   with_tech_indicator=True)
+         y_normaliser, technical_indicators) = self.csv_to_dataset(
+            csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
+            number_of_days=number_of_days,
+            with_tech_indicator=True)
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -239,29 +192,23 @@ class StockPredictionV2(StockPricePrediction):
         plt.legend(['Real', 'Predicted'])
         plt.show()
 
-    @staticmethod
-    def calc_ema(his, time_period):
-        # https://www.investopedia.com/ask/answers/122314/what-exponential-moving-average-ema-formula-and-how-ema-calculated.asp
-        sma = np.mean(his[:, 3])
-        ema_values = [sma]
-        k = 2 / (1 + time_period)
-        for i in range(len(his) - time_period, len(his)):
-            close = his[i][3]
-            ema_values.append(close * k + ema_values[-1] * (1 - k))
-        return ema_values[-1]
-
-    def predict_price_v2_sma_mcad(self, epochs=50, number_of_days=50):
+    def model_with_sma_mcad(self, epochs=50, number_of_days=50):
         """
         includes  technical indicators:
         - SMA (Standard Moving Average)
         - MCAD (Moving Average Convergence Divergence)
 
-        The MACD is calculated by subtracting the 26-period Exponential Moving Average from the 12-period EMA[6]
+        The MCAD is calculated by subtracting the
+        26-period Exponential Moving Average from the 12-period EMA[6]
         """
-        (ohlcv_histories, next_day_open_values, unscaled_y,
-         y_normaliser, technical_indicators) = self.csv_to_dataset(number_of_days=number_of_days,
-                                                                   with_tech_indicator=True)
-
+        (ohlcv_histories,
+         next_day_open_values,
+         unscaled_y,
+         y_normaliser,
+         technical_indicators) = self.csv_to_dataset(
+                csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
+                number_of_days=number_of_days,
+                with_tech_indicator=True)
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
         # splitting the dataset up into train and test sets
@@ -316,13 +263,9 @@ class StockPredictionV2(StockPricePrediction):
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
 
-        scores = self.model.evaluate(x=[x_test, tech_ind_test], y=y_test)
-        LOGGER.debug(f'Scores: {scores}')  # mean squared error of the normalised data
-
-        y_test_predicted = self.model.predict(x_test)
+        y_test_predicted = self.model.predict(x=[x_test, tech_ind_test])
         y_test_predicted = y_normaliser.inverse_transform(y_test_predicted)
-        # also getting predictions for the entire dataset, just to see how it performs
-        y_predicted = self.model.predict(ohlcv_histories)
+        y_predicted = self.model.predict(x=[ohlcv_histories, technical_indicators])
         y_predicted = y_normaliser.inverse_transform(y_predicted)
 
         assert unscaled_y_test.shape == y_test_predicted.shape

@@ -26,6 +26,10 @@ class StockPredictionV1(StockPricePrediction):
         self.rmse = None
         self.json_model_path = self.json_model_path.with_suffix('.v1.json')
         self.model_file_path = self.json_model_path.with_suffix('.v1.h5')
+        if reset:
+            LOGGER.debug('Deleting all model related files')
+            self.model_file_path.unlink(missing_ok=True)
+            self.json_model_path.unlink(missing_ok=True)
 
     def predict_price_v1(self, epochs=50, number_of_days=60):
         """
