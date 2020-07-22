@@ -19,3 +19,4 @@ tabulate
 colorlog
 ratelimit
 mplfinance
+pandas
