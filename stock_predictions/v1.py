@@ -19,13 +19,18 @@ class StockPredictionV1(StockPricePrediction):
 
     def __init__(self, stock_symbol='FB',
                  start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d")):
+                 end_date=datetime.now().strftime("%Y-%m-%d"),
+                 reset=False):
         super().__init__(stock_symbol, start_date, end_date)
         self.valid = None
         self.data = None
         self.rmse = None
         self.json_model_path = self.json_model_path.with_suffix('.v1.json')
         self.model_file_path = self.json_model_path.with_suffix('.v1.h5')
+        if reset:
+            LOGGER.debug('Deleting all model related files')
+            self.model_file_path.unlink(missing_ok=True)
+            self.json_model_path.unlink(missing_ok=True)
 
     def predict_price_v1(self, epochs=50, number_of_days=60):
         """
@@ -92,7 +97,8 @@ class StockPredictionV1(StockPricePrediction):
         LOGGER.info("%s: %.2f%%" % (self.model.metrics_names[1], scores[1] * 100))
 
         # if you need to visualize the model layers
-        plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}")
+        plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}",
+                   show_shapes=True)
 
         # Test data set
         test_data = data_normalised[training_data_len - number_of_days:, :]

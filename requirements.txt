@@ -9,8 +9,8 @@ Click
 yfinance
 pandas_datareader
 sklearn
-keras
-tensorflow
+keras~=2.4.3
+tensorflow~=2.2.0
 pydot
 graphviz
 alpha_vantage
@@ -19,4 +19,11 @@ tabulate
 colorlog
 ratelimit
 mplfinance
+<<<<<<< HEAD
+numpy
+pandas
+requests
+lxml
+scikit-learn
+scipy
 pandas
