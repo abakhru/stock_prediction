@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import json
 from datetime import datetime
-from pathlib import Path
 
 import click
 import requests
 import yfinance
 from pandas import DataFrame
-from pandas_datareader import DataReader
 
+from stock_predictions import ROOT
 from stock_predictions.logger import LOGGER
 from stock_predictions.utils import pretty_print_df
 
@@ -86,7 +85,7 @@ def main(stock, exchange):
 
 
 if __name__ == '__main__':
-    m = Path(__file__).parent.resolve().joinpath('t.txt').read_text().splitlines()
+    m = ROOT.joinpath('data', 't.txt').read_text().splitlines()
     s = [i.split(' ', 1)[1:] for i in m]
     b = [i[0].strip() for i in s]
     c = [i.split('EQ')[0].replace('-', '') for i in b]
