@@ -19,7 +19,8 @@ class StockPredictionV1(StockPricePrediction):
 
     def __init__(self, stock_symbol='FB',
                  start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d")):
+                 end_date=datetime.now().strftime("%Y-%m-%d"),
+                 reset=False):
         super().__init__(stock_symbol, start_date, end_date)
         self.valid = None
         self.data = None

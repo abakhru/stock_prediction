@@ -280,3 +280,56 @@ class StockPredictionV2(StockPricePrediction):
         plt.plot(y_test_predicted[0:-1], label='predicted')
         plt.legend(['Real', 'Predicted'])
         plt.show()
+
+        buys = []
+        sells = []
+        thresh = 0.2
+
+        x = 0
+        for ohlcv, ind in zip(x_test, tech_ind_test):
+            normalised_price_today = ohlcv[-1][0]
+            normalised_price_today = np.array([[normalised_price_today]])
+            price_today = y_normaliser.inverse_transform(normalised_price_today)
+            predicted = np.squeeze(y_normaliser.inverse_transform(self.model.predict([[ohlcv],
+                                                                                   [ind]])))
+            delta = predicted - price_today
+            # print(delta)
+            if delta > thresh:
+                buys.append((x, price_today[0][0]))
+            elif delta < -thresh:
+                sells.append((x, price_today[0][0]))
+            x += 1
+        print(buys)
+        print(sells)
+
+        plt.gcf().set_size_inches(22, 15, forward=True)
+
+        start = 0
+        end = -1
+
+        real = plt.plot(unscaled_y_test[start:end], label='real')
+        pred = plt.plot(y_test_predicted[start:end], label='predicted')
+        plt.scatter(list(list(zip(*buys))[0]), list(list(zip(*buys))[1]), c='#00ff00')
+        plt.scatter(list(list(zip(*sells))[0]), list(list(zip(*sells))[1]), c='#ff0000')
+        # real = plt.plot(unscaled_y[start:end], label='real')
+        # pred = plt.plot(y_predicted[start:end], label='predicted')
+        plt.legend(['Real', 'Predicted'])
+        plt.show()
+
+    @staticmethod
+    def compute_earnings(buys, sells):
+        purchase_amt = 10
+        stock = 0
+        balance = 0
+        while len(buys) > 0 and len(sells) > 0:
+            if buys[0][0] < sells[0][0]:
+                # time to buy $10 worth of stock
+                balance -= purchase_amt
+                stock += purchase_amt / buys[0][1]
+                buys.pop(0)
+            else:
+                # time to sell all of our stock
+                balance += stock * sells[0][1]
+                stock = 0
+                sells.pop(0)
+        print(balance)

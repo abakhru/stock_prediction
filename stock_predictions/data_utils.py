@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pandas_datareader
@@ -7,7 +9,7 @@ from tabulate import tabulate
 
 from stock_predictions import ALPHA_VANTAGE_APIKEY, ROOT, TODAY_DATE
 from stock_predictions.logger import LOGGER
-from stock_predictions.utils import pretty_print_df
+from stock_predictions.utils import pretty_print_df, visualize_price_history
 
 
 class DataUtils:
@@ -17,7 +19,7 @@ class DataUtils:
         self.data_normaliser = MinMaxScaler()
 
     @staticmethod
-    def alpha_vantage_get_dataset(stock_symbol, csv_path):
+    def alpha_vantage_get_dataset(csv_path):
         """
         1. open  2. high    3. low  4. close   5. volume
         1   360.700   365.00  357.5700    364.84  34380628.0
@@ -27,6 +29,8 @@ class DataUtils:
         5   354.635   356.56  345.1500    349.72  66118952.0
         :return:
         """
+        assert isinstance(csv_path, Path)
+        stock_symbol = csv_path.name.split('_')[0].upper()
         ts = TimeSeries(key=ALPHA_VANTAGE_APIKEY, output_format='pandas')
         data, meta_data = ts.get_daily(stock_symbol, outputsize='full')
         data.to_csv(csv_path)
@@ -50,7 +54,7 @@ class DataUtils:
             df.to_csv(csv_path)
         LOGGER.info(f"\n==== Stock price data for '{stock_symbol}' ===="
                     f"\n{tabulate(df[:5], headers='keys', tablefmt='sql')}")
-        # self.visualize_price_history(df)
+        visualize_price_history(df)
         return df
 
     def xcsv_to_dataset(self, stock, number_of_days=60, with_tech_indicator=False):
@@ -105,6 +109,8 @@ class DataUtils:
         return tuple(ret_values)
 
     def csv_to_dataset(self, csv_path, number_of_days=60, with_tech_indicator=False):
+        if not csv_path.exists():
+            self.alpha_vantage_get_dataset(csv_path)
         data = pd.read_csv(csv_path)
         LOGGER.info(f'==== {csv_path.name} ====')
         pretty_print_df(data.tail())
@@ -194,5 +200,6 @@ if __name__ == '__main__':
     p = DataUtils()
     # p.csv_to_dataset(stock='TSLA', number_of_days=60)
     # p.multiple_csv_to_dataset(test_set_name=['FB', 'AAPL', 'MSFT', 'AMZN', 'GOOGL'],
+
     p.multiple_csv_to_dataset(test_set_name='TSLA_daily.csv',
                               number_of_days=60)
