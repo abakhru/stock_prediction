@@ -54,7 +54,7 @@ class DataUtils:
             df.to_csv(csv_path)
         LOGGER.info(f"\n==== Stock price data for '{stock_symbol}' ===="
                     f"\n{tabulate(df[:5], headers='keys', tablefmt='sql')}")
-        visualize_price_history(df)
+        # visualize_price_history(df)
         return df
 
     def xcsv_to_dataset(self, stock, number_of_days=60, with_tech_indicator=False):
