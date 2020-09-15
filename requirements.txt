@@ -19,7 +19,6 @@ tabulate
 colorlog
 ratelimit
 mplfinance
-<<<<<<< HEAD
 numpy
 pandas
 requests
@@ -27,3 +26,6 @@ lxml
 scikit-learn
 scipy
 pandas
+fastquant
+arrow
+yellowbrick
