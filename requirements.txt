@@ -10,7 +10,7 @@ yfinance~=0.1.54
 pandas_datareader
 sklearn~=0.0
 keras~=2.4.3
-tensorflow~=2.2.0
+tensorflow~=2.4.0
 pydot
 graphviz
 alpha_vantage
