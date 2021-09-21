@@ -22,11 +22,13 @@ np.random.seed(4)
 
 
 class StockPredictionV2(StockPricePrediction):
-
-    def __init__(self, stock_symbol='FB',
-                 start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d"),
-                 reset=False):
+    def __init__(
+        self,
+        stock_symbol='FB',
+        start_date="2010-01-01",
+        end_date=datetime.now().strftime("%Y-%m-%d"),
+        reset=False,
+    ):
         super().__init__(stock_symbol, start_date, end_date)
         self.json_model_path = self.json_model_path.with_suffix('.v2.json')
         self.model_file_path = self.json_model_path.with_suffix('.v2.h5')
@@ -41,10 +43,10 @@ class StockPredictionV2(StockPricePrediction):
         Long Short Term Memory (LSTM) to predict the closing stock price of a stock
         using the past 60 day stock price.
         """
-        (ohlcv_histories, next_day_open_values,
-         unscaled_y, y_normaliser) = self.csv_to_dataset(
+        (ohlcv_histories, next_day_open_values, unscaled_y, y_normaliser) = self.csv_to_dataset(
             csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
-            number_of_days=number_of_days)
+            number_of_days=number_of_days,
+        )
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -73,14 +75,17 @@ class StockPredictionV2(StockPricePrediction):
             LOGGER.info('Building V2 LSTM Stock Prediction Model')
             self.model.summary()
             # if you need to visualize the model layers
-            plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}",
-                       show_shapes=True)
-            self.model.fit(x=x_train,
-                           y=y_train,
-                           batch_size=32,
-                           epochs=epochs,
-                           shuffle=True,
-                           validation_split=0.1)
+            plot_model(
+                self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}", show_shapes=True
+            )
+            self.model.fit(
+                x=x_train,
+                y=y_train,
+                batch_size=32,
+                epochs=epochs,
+                shuffle=True,
+                validation_split=0.1,
+            )
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
 
@@ -110,11 +115,17 @@ class StockPredictionV2(StockPricePrediction):
         """
         includes SMA (Standard Moving Average technical indicator
         """
-        (ohlcv_histories, next_day_open_values, unscaled_y,
-         y_normaliser, technical_indicators) = self.csv_to_dataset(
+        (
+            ohlcv_histories,
+            next_day_open_values,
+            unscaled_y,
+            y_normaliser,
+            technical_indicators,
+        ) = self.csv_to_dataset(
             csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
             number_of_days=number_of_days,
-            with_tech_indicator=True)
+            with_tech_indicator=True,
+        )
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -146,27 +157,30 @@ class StockPredictionV2(StockPricePrediction):
             y = Dropout(0.2, name='tech_dropout_0')(y)
             technical_indicators_branch = Model(inputs=dense_input, outputs=y)
             # combine the output of the two branches
-            combined = concatenate(inputs=[lstm_branch.output,
-                                           technical_indicators_branch.output],
-                                   name='concatenate')
+            combined = concatenate(
+                inputs=[lstm_branch.output, technical_indicators_branch.output], name='concatenate'
+            )
             z = Dense(64, activation="sigmoid", name='dense_pooling')(combined)
             z = Dense(1, activation="linear", name='dense_out')(z)
             # our model will accept the inputs of the two branches and then output a single value
-            self.model = Model(inputs=[lstm_branch.input,
-                                       technical_indicators_branch.input],
-                               outputs=z)
+            self.model = Model(
+                inputs=[lstm_branch.input, technical_indicators_branch.input], outputs=z
+            )
             self.model.compile(loss='mse', optimizer=optimizers.Adam(lr=0.0005))
             LOGGER.info('Building V2 LSTM Stock Prediction Model')
             self.model.summary()
             # if you need to visualize the model layers
-            plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}",
-                       show_shapes=True)
-            self.model.fit(x=[x_train, tech_ind_train],
-                           y=y_train,
-                           batch_size=32,
-                           epochs=epochs,
-                           shuffle=True,
-                           validation_split=0.1)
+            plot_model(
+                self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}", show_shapes=True
+            )
+            self.model.fit(
+                x=[x_train, tech_ind_train],
+                y=y_train,
+                batch_size=32,
+                epochs=epochs,
+                shuffle=True,
+                validation_split=0.1,
+            )
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
 
@@ -201,14 +215,17 @@ class StockPredictionV2(StockPricePrediction):
         The MCAD is calculated by subtracting the
         26-period Exponential Moving Average from the 12-period EMA[6]
         """
-        (ohlcv_histories,
-         next_day_open_values,
-         unscaled_y,
-         y_normaliser,
-         technical_indicators) = self.csv_to_dataset(
-                csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
-                number_of_days=number_of_days,
-                with_tech_indicator=True)
+        (
+            ohlcv_histories,
+            next_day_open_values,
+            unscaled_y,
+            y_normaliser,
+            technical_indicators,
+        ) = self.csv_to_dataset(
+            csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
+            number_of_days=number_of_days,
+            with_tech_indicator=True,
+        )
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
         # splitting the dataset up into train and test sets
@@ -239,27 +256,30 @@ class StockPredictionV2(StockPricePrediction):
             y = Dropout(0.2, name='tech_dropout_0')(y)
             technical_indicators_branch = Model(inputs=dense_input, outputs=y)
             # combine the output of the two branches
-            combined = concatenate(inputs=[lstm_branch.output,
-                                           technical_indicators_branch.output],
-                                   name='concatenate')
+            combined = concatenate(
+                inputs=[lstm_branch.output, technical_indicators_branch.output], name='concatenate'
+            )
             z = Dense(64, activation="sigmoid", name='dense_pooling')(combined)
             z = Dense(1, activation="linear", name='dense_out')(z)
             # our model will accept the inputs of the two branches and then output a single value
-            self.model = Model(inputs=[lstm_branch.input,
-                                       technical_indicators_branch.input],
-                               outputs=z)
+            self.model = Model(
+                inputs=[lstm_branch.input, technical_indicators_branch.input], outputs=z
+            )
             self.model.compile(loss='mse', optimizer=optimizers.Adam(lr=0.0005))
             LOGGER.info('Building V2 LSTM Stock Prediction Model')
             self.model.summary()
             # if you need to visualize the model layers
-            plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}",
-                       show_shapes=True)
-            self.model.fit(x=[x_train, tech_ind_train],
-                           y=y_train,
-                           batch_size=32,
-                           epochs=epochs,
-                           shuffle=True,
-                           validation_split=0.1)
+            plot_model(
+                self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}", show_shapes=True
+            )
+            self.model.fit(
+                x=[x_train, tech_ind_train],
+                y=y_train,
+                batch_size=32,
+                epochs=epochs,
+                shuffle=True,
+                validation_split=0.1,
+            )
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
 
@@ -290,8 +310,9 @@ class StockPredictionV2(StockPricePrediction):
             normalised_price_today = ohlcv[-1][0]
             normalised_price_today = np.array([[normalised_price_today]])
             price_today = y_normaliser.inverse_transform(normalised_price_today)
-            predicted = np.squeeze(y_normaliser.inverse_transform(self.model.predict([[ohlcv],
-                                                                                   [ind]])))
+            predicted = np.squeeze(
+                y_normaliser.inverse_transform(self.model.predict([[ohlcv], [ind]]))
+            )
             delta = predicted - price_today
             # print(delta)
             if delta > thresh:

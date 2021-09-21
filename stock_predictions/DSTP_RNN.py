@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn, optim
 from torch.autograd import Variable
+
 # torch.cpu.is_available()
 
 from stock_predictions import ROOT
@@ -42,11 +43,7 @@ def read_data(input_path):
 
 
 class Encoder(nn.Module):
-
-    def __init__(self, T,
-                 input_size,
-                 encoder_num_hidden,
-                 parallel=False):
+    def __init__(self, T, input_size, encoder_num_hidden, parallel=False):
         super(Encoder, self).__init__()
         self.encoder_num_hidden = encoder_num_hidden
         self.input_size = input_size
@@ -54,17 +51,19 @@ class Encoder(nn.Module):
         self.T = T
 
         # Fig 1. Temporal Attention Mechanism: Encoder is LSTM
-        self.encoder_lstm = nn.LSTM(input_size=self.input_size,
-                                    hidden_size=self.encoder_num_hidden)
-        self.encoder_lstm2 = nn.LSTM(input_size=self.input_size,
-                                     hidden_size=self.encoder_num_hidden)
+        self.encoder_lstm = nn.LSTM(input_size=self.input_size, hidden_size=self.encoder_num_hidden)
+        self.encoder_lstm2 = nn.LSTM(
+            input_size=self.input_size, hidden_size=self.encoder_num_hidden
+        )
         # Construct Input Attention Mechanism via deterministic attention model
         # Eq. 8: W_e[h_{t-1}; s_{t-1}] + U_e * x^k
-        self.encoder_attn = nn.Linear(in_features=2 * self.encoder_num_hidden + self.T - 1,
-                                      out_features=1, bias=True)  # 1033
+        self.encoder_attn = nn.Linear(
+            in_features=2 * self.encoder_num_hidden + self.T - 1, out_features=1, bias=True
+        )  # 1033
         # W_s[h_{t-1} ; s_{t-1}] + U_s[x^k ; y^k]
-        self.encoder_attn2 = nn.Linear(in_features=2 * self.encoder_num_hidden + 2 * self.T - 2,
-                                       out_features=1, bias=True)
+        self.encoder_attn2 = nn.Linear(
+            in_features=2 * self.encoder_num_hidden + 2 * self.T - 2, out_features=1, bias=True
+        )
 
     def forward(self, X, y_prev):
         """forward.
@@ -96,15 +95,19 @@ class Encoder(nn.Module):
         for t in range(self.T - 1):
             # Phase one attention
             # batch_size * input_size * (2*hidden_size + T - 1)
-            x = torch.cat((h_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),  # 233 363 1033
-                           s_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
-                           X.permute(0, 2, 1)), dim=2)
+            x = torch.cat(
+                (
+                    h_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),  # 233 363 1033
+                    s_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
+                    X.permute(0, 2, 1),
+                ),
+                dim=2,
+            )
 
             # test = x.view(-1, self.encoder_num_hidden * 2 + self.T - 1)
             # print(test.size()) #84579 1033
 
-            x = self.encoder_attn(  # 84579 1
-                    x.view(-1, self.encoder_num_hidden * 2 + self.T - 1))
+            x = self.encoder_attn(x.view(-1, self.encoder_num_hidden * 2 + self.T - 1))  # 84579 1
 
             # get weights by softmax
             alpha = F.softmax(x.view(-1, self.input_size))  # 233x363
@@ -113,7 +116,7 @@ class Encoder(nn.Module):
             x_tilde = torch.mul(alpha, X[:, t, :])  # 233x363
             # print(x_tilde.size())
 
-            # encoder LSTM 
+            # encoder LSTM
             self.encoder_lstm.flatten_parameters()
             _, final_state = self.encoder_lstm(x_tilde.unsqueeze(0), (h_n, s_n))
             h_n = final_state[0]
@@ -121,21 +124,24 @@ class Encoder(nn.Module):
 
             # Phase two attention from DSTP-RNN Paper
 
-            x2 = torch.cat((hs_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),  # 233 363 1042
-                            ss_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
-                            X.permute(0, 2, 1),
-                            y_prev.repeat(1, 1, self.input_size).permute(0, 2, 1)), dim=2)
+            x2 = torch.cat(
+                (
+                    hs_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),  # 233 363 1042
+                    ss_n.repeat(self.input_size, 1, 1).permute(1, 0, 2),
+                    X.permute(0, 2, 1),
+                    y_prev.repeat(1, 1, self.input_size).permute(0, 2, 1),
+                ),
+                dim=2,
+            )
 
-            x2 = self.encoder_attn2(
-                    x2.view(-1, self.encoder_num_hidden * 2 + 2 * self.T - 2))
+            x2 = self.encoder_attn2(x2.view(-1, self.encoder_num_hidden * 2 + 2 * self.T - 2))
 
             alpha2 = F.softmax(x2.view(-1, self.input_size))  # 233x363
 
             x_tilde2 = torch.mul(alpha2, x_tilde)
 
             self.encoder_lstm2.flatten_parameters()
-            _, final_state2 = self.encoder_lstm2(
-                    x_tilde2.unsqueeze(0), (hs_n, ss_n))
+            _, final_state2 = self.encoder_lstm2(x_tilde2.unsqueeze(0), (hs_n, ss_n))
             hs_n = final_state2[0]
             ss_n = final_state2[1]
             # print(x_tilde2.size())
@@ -160,7 +166,6 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-
     def __init__(self, T, decoder_num_hidden, encoder_num_hidden):
         super(Decoder, self).__init__()
         self.decoder_num_hidden = decoder_num_hidden
@@ -168,9 +173,10 @@ class Decoder(nn.Module):
         self.T = T
 
         self.attn_layer = nn.Sequential(
-                nn.Linear(2 * decoder_num_hidden + encoder_num_hidden, encoder_num_hidden),
-                nn.Tanh(),
-                nn.Linear(encoder_num_hidden, 1))
+            nn.Linear(2 * decoder_num_hidden + encoder_num_hidden, encoder_num_hidden),
+            nn.Tanh(),
+            nn.Linear(encoder_num_hidden, 1),
+        )
         self.lstm_layer = nn.LSTM(input_size=1, hidden_size=decoder_num_hidden)
         self.fc = nn.Linear(encoder_num_hidden + 1, 1)
         self.fc_final_price = nn.Linear(decoder_num_hidden + encoder_num_hidden, 1)
@@ -182,24 +188,29 @@ class Decoder(nn.Module):
         c_n = self._init_states(X_encoed)
 
         for t in range(self.T - 1):
-            x = torch.cat((d_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
-                           c_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
-                           X_encoed), dim=2)
-            beta = F.softmax(self.attn_layer(
-                    x.view(-1, 2 * self.decoder_num_hidden + self.encoder_num_hidden)).view(-1,
-                                                                                            self.T - 1))
+            x = torch.cat(
+                (
+                    d_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
+                    c_n.repeat(self.T - 1, 1, 1).permute(1, 0, 2),
+                    X_encoed,
+                ),
+                dim=2,
+            )
+            beta = F.softmax(
+                self.attn_layer(
+                    x.view(-1, 2 * self.decoder_num_hidden + self.encoder_num_hidden)
+                ).view(-1, self.T - 1)
+            )
             # Eqn. 14: compute context vector
             # batch_size * encoder_hidden_size
             context = torch.bmm(beta.unsqueeze(1), X_encoed)[:, 0, :]
             if t < self.T - 1:
                 # Eqn. 15
                 # batch_size * 1
-                y_tilde = self.fc(
-                        torch.cat((context, y_prev[:, t].unsqueeze(1)), dim=1))
+                y_tilde = self.fc(torch.cat((context, y_prev[:, t].unsqueeze(1)), dim=1))
                 # Eqn. 16: LSTM
                 self.lstm_layer.flatten_parameters()
-                _, final_states = self.lstm_layer(
-                        y_tilde.unsqueeze(0), (d_n, c_n))
+                _, final_states = self.lstm_layer(y_tilde.unsqueeze(0), (d_n, c_n))
                 # 1 * batch_size * decoder_num_hidden
                 d_n = final_states[0]
                 # 1 * batch_size * decoder_num_hidden
@@ -226,14 +237,18 @@ class Decoder(nn.Module):
 
 
 class DSTP_rnn(nn.Module):
-
-    def __init__(self, X, y, T,
-                 encoder_num_hidden,
-                 decoder_num_hidden,
-                 batch_size,
-                 learning_rate,
-                 epochs,
-                 parallel=False):
+    def __init__(
+        self,
+        X,
+        y,
+        T,
+        encoder_num_hidden,
+        decoder_num_hidden,
+        batch_size,
+        learning_rate,
+        epochs,
+        parallel=False,
+    ):
 
         super(DSTP_rnn, self).__init__()
         self.encoder_num_hidden = encoder_num_hidden
@@ -247,12 +262,10 @@ class DSTP_rnn(nn.Module):
         self.X = X
         self.y = y
 
-        self.Encoder = Encoder(input_size=X.shape[1],
-                               encoder_num_hidden=encoder_num_hidden,
-                               T=T)
-        self.Decoder = Decoder(encoder_num_hidden=encoder_num_hidden,
-                               decoder_num_hidden=decoder_num_hidden,
-                               T=T)
+        self.Encoder = Encoder(input_size=X.shape[1], encoder_num_hidden=encoder_num_hidden, T=T)
+        self.Decoder = Decoder(
+            encoder_num_hidden=encoder_num_hidden, decoder_num_hidden=decoder_num_hidden, T=T
+        )
         self.Encoder = self.Encoder.cpu()
         self.Decoder = self.Decoder.cpu()
         # Loss function
@@ -262,12 +275,14 @@ class DSTP_rnn(nn.Module):
             self.encoder = nn.DataParallel(self.encoder)
             self.decoder = nn.DataParallel(self.decoder)
 
-        self.encoder_optimizer = optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                          self.Encoder.parameters()),
-                                            lr=self.learning_rate)
-        self.decoder_optimizer = optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                          self.Decoder.parameters()),
-                                            lr=self.learning_rate)
+        self.encoder_optimizer = optim.Adam(
+            params=filter(lambda p: p.requires_grad, self.Encoder.parameters()),
+            lr=self.learning_rate,
+        )
+        self.decoder_optimizer = optim.Adam(
+            params=filter(lambda p: p.requires_grad, self.Decoder.parameters()),
+            lr=self.learning_rate,
+        )
 
         # Training set
         self.train_timesteps = int(self.X.shape[0] * 0.8)
@@ -276,7 +291,7 @@ class DSTP_rnn(nn.Module):
     def train(self):
 
         """training process."""
-        iter_per_epoch = int(np.ceil(self.train_timesteps * 1. / self.batch_size))
+        iter_per_epoch = int(np.ceil(self.train_timesteps * 1.0 / self.batch_size))
         self.iter_losses = np.zeros(self.epochs * iter_per_epoch)
         self.epoch_losses = np.zeros(self.epochs)
         n_iter = 0
@@ -292,7 +307,7 @@ class DSTP_rnn(nn.Module):
 
             while idx < self.train_timesteps:
                 # get the indices of X_train
-                indices = ref_idx[idx:(idx + self.batch_size)]
+                indices = ref_idx[idx : (idx + self.batch_size)]
                 # x = np.zeros((self.T - 1, len(indices), self.input_size))
                 x = np.zeros((len(indices), self.T - 1, self.input_size))
                 y_prev = np.zeros((len(indices), self.T - 1))
@@ -300,8 +315,8 @@ class DSTP_rnn(nn.Module):
 
                 # format x into 3D tensor
                 for bs in range(len(indices)):
-                    x[bs, :, :] = self.X[indices[bs]:(indices[bs] + self.T - 1), :]
-                    y_prev[bs, :] = self.y[indices[bs]:(indices[bs] + self.T - 1)]
+                    x[bs, :, :] = self.X[indices[bs] : (indices[bs] + self.T - 1), :]
+                    y_prev[bs, :] = self.y[indices[bs] : (indices[bs] + self.T - 1)]
 
                 loss = self.train_forward(x, y_prev, y_gt)
 
@@ -315,11 +330,14 @@ class DSTP_rnn(nn.Module):
                         param_group['lr'] = param_group['lr'] * 0.9
                     for param_group in self.decoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
-                self.epoch_losses[epoch] = np.mean(self.iter_losses[range(epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)])
+                self.epoch_losses[epoch] = np.mean(
+                    self.iter_losses[range(epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)]
+                )
 
             if epoch % 10 == 0:
-                print("Epochs: ", epoch, " Iterations: ", n_iter, " Loss: ",
-                      self.epoch_losses[epoch])
+                print(
+                    "Epochs: ", epoch, " Iterations: ", n_iter, " Loss: ", self.epoch_losses[epoch]
+                )
             if epoch % 1000 == 0 and epoch != 0:
                 torch.save(model.state_dict(), f'{ROOT}/models/dstprnn_model_{epoch}.pkl')
 
@@ -329,10 +347,12 @@ class DSTP_rnn(nn.Module):
         self.decoder_optimizer.zero_grad()
 
         input_weighted, input_encoded = self.Encoder(
-                Variable(torch.from_numpy(X).type(torch.FloatTensor).cpu()),
-                Variable(torch.from_numpy(y_prev).type(torch.FloatTensor).cpu()))  # cpu
-        y_pred_price = self.Decoder(input_encoded, Variable(
-                torch.from_numpy(y_prev).type(torch.FloatTensor)).cpu())  # cpu
+            Variable(torch.from_numpy(X).type(torch.FloatTensor).cpu()),
+            Variable(torch.from_numpy(y_prev).type(torch.FloatTensor).cpu()),
+        )  # cpu
+        y_pred_price = self.Decoder(
+            input_encoded, Variable(torch.from_numpy(y_prev).type(torch.FloatTensor)).cpu()
+        )  # cpu
 
         y_true_price = torch.from_numpy(y_gt).type(torch.FloatTensor)
         y_true_price = y_true_price.view(-1, 1).cpu()  # cpu
@@ -355,32 +375,38 @@ class DSTP_rnn(nn.Module):
             y_pred_price = np.zeros(self.X.shape[0] - self.train_timesteps)
         i = 0
         while i < len(y_pred_price):
-            batch_idx = np.array(range(len(y_pred_price)))[i: (i + self.batch_size)]
+            batch_idx = np.array(range(len(y_pred_price)))[i : (i + self.batch_size)]
             X = np.zeros((len(batch_idx), self.T - 1, self.X.shape[1]))
             y_history = np.zeros((len(batch_idx), self.T - 1))
 
             for j in range(len(batch_idx)):
                 if on_train:
-                    X[j, :, :] = self.X[range(
-                            batch_idx[j], batch_idx[j] + self.T - 1), :]
-                    y_history[j, :] = self.y[range(
-                            batch_idx[j], batch_idx[j] + self.T - 1)]
+                    X[j, :, :] = self.X[range(batch_idx[j], batch_idx[j] + self.T - 1), :]
+                    y_history[j, :] = self.y[range(batch_idx[j], batch_idx[j] + self.T - 1)]
                 else:
-                    X[j, :, :] = self.X[range(
+                    X[j, :, :] = self.X[
+                        range(
                             batch_idx[j] + self.train_timesteps - self.T,
-                            batch_idx[j] + self.train_timesteps - 1), :]
-                    y_history[j, :] = self.y[range(
+                            batch_idx[j] + self.train_timesteps - 1,
+                        ),
+                        :,
+                    ]
+                    y_history[j, :] = self.y[
+                        range(
                             batch_idx[j] + self.train_timesteps - self.T,
-                            batch_idx[j] + self.train_timesteps - 1)]
+                            batch_idx[j] + self.train_timesteps - 1,
+                        )
+                    ]
 
             y_history = Variable(torch.from_numpy(y_history).type(torch.FloatTensor).cpu())
             _, input_encoded = self.Encoder(
-                    Variable(torch.from_numpy(X).type(torch.FloatTensor).cpu()),
-                    Variable(y_history).cpu())  # cpu
+                Variable(torch.from_numpy(X).type(torch.FloatTensor).cpu()),
+                Variable(y_history).cpu(),
+            )  # cpu
 
             y_pred_price = self.Decoder(input_encoded, y_history)
 
-            y_pred_price = y_pred_price[i:(i + self.batch_size)]
+            y_pred_price = y_pred_price[i : (i + self.batch_size)]
             y_pred_price = y_pred_price.cpu().detach().numpy()[:, 0]
 
             i += self.batch_size

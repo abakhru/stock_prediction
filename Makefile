@@ -14,8 +14,9 @@ help:
 ## build the python virtual env for the project
 venv:
 	if [ ! -d "env" ]; then python3 -m venv env; fi
-	env/bin/pip install -U pip setuptools wheel
-	env/bin/pip install -r requirements.txt
+	env/bin/pip install -U pip setuptools wheel;
+	env/bin/pip install -e .;
+	# env/bin/pip install -r requirements.txt
 
 ## make clean
 clean:
@@ -26,5 +27,9 @@ clean:
 	find . -name '*.egg' -exec rm -f {} +
 
 ## lint python files using black
-format:
-	black --skip-string-normalization --line-length 100 src test
+lint:
+	black -S -l 100 .
+
+## run stock prediction
+run:
+	env/bin/python stock_predictions/main.py -s TSLA -e 5 --v1

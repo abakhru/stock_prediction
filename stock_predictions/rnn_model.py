@@ -8,6 +8,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from data_model import StockDataSet
 from keras.layers import Activation, Dense, Dropout, Input, LSTM
+
 # from model_rnn import LstmRNN
 from tensorflow import optimizers
 from tensorflow.python.keras.models import Model, model_from_json
@@ -37,10 +38,12 @@ FLAGS = flags.FLAGS
 
 
 class StockPredictionRNN(StockPricePrediction):
-
-    def __init__(self, stock_symbol='FB',
-                 start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d")):
+    def __init__(
+        self,
+        stock_symbol='FB',
+        start_date="2010-01-01",
+        end_date=datetime.now().strftime("%Y-%m-%d"),
+    ):
         super().__init__(stock_symbol, start_date, end_date)
         self.json_model_path = self.json_model_path.with_suffix('.v3.json')
         self.model_file_path = self.json_model_path.with_suffix('.v3.h5')
@@ -53,8 +56,9 @@ class StockPredictionRNN(StockPricePrediction):
         Long Short Term Memory (LSTM) to predict the closing stock price of a stock
         using the past 60 day stock price.
         """
-        (ohlcv_histories, next_day_open_values,
-         unscaled_y, y_normaliser) = self.csv_to_dataset(history_points=history_points)
+        (ohlcv_histories, next_day_open_values, unscaled_y, y_normaliser) = self.csv_to_dataset(
+            history_points=history_points
+        )
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -83,12 +87,14 @@ class StockPredictionRNN(StockPricePrediction):
             self.model.summary()
             # if you need to visualize the model layers
             # plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}")
-            self.model.fit(x=ohlcv_train,
-                           y=y_train,
-                           batch_size=32,
-                           epochs=epochs,
-                           shuffle=True,
-                           validation_split=0.1)
+            self.model.fit(
+                x=ohlcv_train,
+                y=y_train,
+                batch_size=32,
+                epochs=epochs,
+                shuffle=True,
+                validation_split=0.1,
+            )
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
         scores = self.model.evaluate(ohlcv_test, y_test)
@@ -118,10 +124,11 @@ class StockPredictionRNN(StockPricePrediction):
 
     def load_sp500(self, input_size, num_steps, k=None, target_symbol=None, test_ratio=0.05):
         if target_symbol is not None:
-            return [StockDataSet(target_symbol,
-                                 input_size=input_size,
-                                 num_steps=num_steps,
-                                 test_ratio=test_ratio)]
+            return [
+                StockDataSet(
+                    target_symbol, input_size=input_size, num_steps=num_steps, test_ratio=test_ratio
+                )
+            ]
         # Load metadata of s & p 500 stocks
         data = pd.read_csv(self.data_dir.joinpath('constituents-financials.csv'))
         data = data.rename(columns={col: col.lower().replace(' ', '_') for col in data.columns})
@@ -134,12 +141,13 @@ class StockPredictionRNN(StockPricePrediction):
             data = data.head(k)
         LOGGER.info(f"Head of S&P 500 info:\n{data.head()}")
         # Generate embedding meta file
-        data[['symbol', 'sector']].to_csv(self.log_dir.joinpath("metadata.tsv"),
-                                          sep='\t', index=False)
-        return [StockDataSet(row['symbol'],
-                             input_size=input_size,
-                             num_steps=num_steps,
-                             test_ratio=0.05) for _, row in data.iterrows()]
+        data[['symbol', 'sector']].to_csv(
+            self.log_dir.joinpath("metadata.tsv"), sep='\t', index=False
+        )
+        return [
+            StockDataSet(row['symbol'], input_size=input_size, num_steps=num_steps, test_ratio=0.05)
+            for _, row in data.iterrows()
+        ]
 
     def main(self):
         pp.pprint(flags.FLAGS.__flags)
@@ -150,23 +158,23 @@ class StockPredictionRNN(StockPricePrediction):
 
         with tf.Session(config=run_config) as sess:
             rnn_model = LstmRNN(
-                    sess,
-                    FLAGS.stock_count,
-                    lstm_size=FLAGS.lstm_size,
-                    num_layers=FLAGS.num_layers,
-                    num_steps=FLAGS.num_steps,
-                    input_size=FLAGS.input_size,
-                    embed_size=FLAGS.embed_size,
-                    )
+                sess,
+                FLAGS.stock_count,
+                lstm_size=FLAGS.lstm_size,
+                num_layers=FLAGS.num_layers,
+                num_steps=FLAGS.num_steps,
+                input_size=FLAGS.input_size,
+                embed_size=FLAGS.embed_size,
+            )
 
             self.show_all_variables()
 
             stock_data_list = self.load_sp500(
-                    FLAGS.input_size,
-                    FLAGS.num_steps,
-                    k=FLAGS.stock_count,
-                    target_symbol=FLAGS.stock_symbol,
-                    )
+                FLAGS.input_size,
+                FLAGS.num_steps,
+                k=FLAGS.stock_count,
+                target_symbol=FLAGS.stock_symbol,
+            )
 
             if FLAGS.train:
                 rnn_model.train(stock_data_list, FLAGS)

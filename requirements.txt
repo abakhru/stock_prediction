@@ -5,7 +5,7 @@ twine
 Click
 yfinance
 pandas_datareader
-sklearn~=0.0
+sklearn
 keras~=2.4.3
 tensorflow~=2.6.0
 pydot

@@ -16,15 +16,12 @@ from stock_predictions.v2 import StockPredictionV2
 def main(stock, epochs, v1, v2, reset, days):
     # p.plot_moving_avg(stock_symbol=stock, n_forward=40)
     if v1:
-        p = StockPredictionV1(stock_symbol=stock,
-                              start_date='2012-01-01',
-                              reset=reset)
+        p = StockPredictionV1(stock_symbol=stock, start_date='2012-01-01', reset=reset)
         p.predict_price_v1(epochs=epochs, number_of_days=days)
         p.find_accuracy()
         # p.test_prediction(end_date=TODAY_DATE)
     if v2:
-        p = StockPredictionV2(stock_symbol=stock,
-                              start_date='2012-01-01', reset=reset)
+        p = StockPredictionV2(stock_symbol=stock, start_date='2012-01-01', reset=reset)
         # p.basic_model(epochs=epochs, number_of_days=days)
         # p.model_with_sma_only(epochs=epochs, number_of_days=days)
         p.model_with_sma_mcad(epochs=epochs, number_of_days=days)

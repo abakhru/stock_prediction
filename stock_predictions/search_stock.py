@@ -16,11 +16,13 @@ final_df = DataFrame(columns=['Symbol', 'Name', 'URL', 'High', 'Low', 'Open', 'C
 
 
 class SearchStockSymbol:
-
-    def __init__(self, company_name,
-                 exchange='NASDAQ',
-                 start_date="2020-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d")):
+    def __init__(
+        self,
+        company_name,
+        exchange='NASDAQ',
+        start_date="2020-01-01",
+        end_date=datetime.now().strftime("%Y-%m-%d"),
+    ):
         self.company_name = company_name
         self.stock_symbol = None
         self.exchange_name = exchange
@@ -29,23 +31,29 @@ class SearchStockSymbol:
         self.search_stock_symbol()
 
     def search_stock_symbol(self, retry=2):
-        url = (f'http://d.yimg.com/autoc.finance.yahoo.com/autoc?query='
-               f'{self.company_name}&callback=YAHOO.Finance.SymbolSuggest.ssCallback&'
-               f'lang=en')
+        url = (
+            f'http://d.yimg.com/autoc.finance.yahoo.com/autoc?query='
+            f'{self.company_name}&callback=YAHOO.Finance.SymbolSuggest.ssCallback&'
+            f'lang=en'
+        )
         if self.company_name in final_df['Name'].values:
             LOGGER.warning(f'{self.company_name} already processed')
             return
         response = requests.get(url)
         assert response.status_code == 200
-        data = json.loads(response.text.replace('YAHOO.Finance.SymbolSuggest.ssCallback(',
-                                                '').replace(");", ""))
+        data = json.loads(
+            response.text.replace('YAHOO.Finance.SymbolSuggest.ssCallback(', '').replace(");", "")
+        )
         if retry <= 0:
-            LOGGER.critical(f'Stock symbol for "{self.company_name.capitalize()}" '
-                            f'not found in {self.exchange_name} exchange')
+            LOGGER.critical(
+                f'Stock symbol for "{self.company_name.capitalize()}" '
+                f'not found in {self.exchange_name} exchange'
+            )
             return
         try:
-            nasdaq_result = [i for i in data['ResultSet']['Result']
-                             if i['exchDisp'] == self.exchange_name][0]
+            nasdaq_result = [
+                i for i in data['ResultSet']['Result'] if i['exchDisp'] == self.exchange_name
+            ][0]
             LOGGER.debug(f'{self.exchange_name} only:\n{json.dumps(nasdaq_result, indent=4)}')
             self.company_name = nasdaq_result['name']
             self.stock_symbol = nasdaq_result['symbol']

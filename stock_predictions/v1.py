@@ -16,11 +16,13 @@ from stock_predictions.logger import LOGGER
 
 
 class StockPredictionV1(StockPricePrediction):
-
-    def __init__(self, stock_symbol='FB',
-                 start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d"),
-                 reset=False):
+    def __init__(
+        self,
+        stock_symbol='FB',
+        start_date="2010-01-01",
+        end_date=datetime.now().strftime("%Y-%m-%d"),
+        reset=False,
+    ):
         super().__init__(stock_symbol, start_date, end_date)
         self.valid = None
         self.data = None
@@ -47,7 +49,7 @@ class StockPredictionV1(StockPricePrediction):
         # Converting the dataframe to a numpy array
         dataset = self.data.values
         # Get /Compute the number of rows to train the model on
-        training_data_len = math.ceil(len(dataset) * .8)
+        training_data_len = math.ceil(len(dataset) * 0.8)
         # Scale the all of the data to be values between 0 and 1
         # self.data_normaliser = MinMaxScaler(feature_range=(0, 1))
         data_normalised = self.data_normaliser.fit_transform(dataset)
@@ -56,7 +58,7 @@ class StockPredictionV1(StockPricePrediction):
         # Split the data into x_train and y_train data sets
         x_train, y_train = list(), list()
         for i in range(number_of_days, len(train_data)):
-            x_train.append(train_data[i - number_of_days:i, 0])
+            x_train.append(train_data[i - number_of_days : i, 0])
             y_train.append(train_data[i, 0])
         # Convert x_train and y_train to numpy arrays
         x_train, y_train = np.array(x_train), np.array(y_train)
@@ -69,27 +71,22 @@ class StockPredictionV1(StockPricePrediction):
             self.model = model_from_json(self.json_model_path.read_text())
             self.model.load_weights(f'{self.model_file_path}')
             # self.model.compile(optimizer='adam', loss='mean_squared_error')
-            self.model.compile(loss='binary_crossentropy',
-                               optimizer='rmsprop',
-                               metrics=['accuracy'])
+            self.model.compile(
+                loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy']
+            )
         else:
-            self.model.add(LSTM(units=50, return_sequences=True,
-                                input_shape=(x_train.shape[1], 1)))
+            self.model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
             self.model.add(LSTM(units=50, return_sequences=False))
             self.model.add(Dense(units=25))
             self.model.add(Dense(units=1))
             # self.model.compile(loss='binary_crossentropy',
             #                    optimizer='rmsprop',
             #                    metrics=['accuracy'])
-            self.model.compile(optimizer='adam',
-                               loss='mean_squared_error',
-                               metrics=['accuracy'])
-            LOGGER.info(f'Staring model training based on last {number_of_days} days price '
-                        f'dataset ...')
-            self.model.fit(x_train, y_train,
-                           batch_size=1,
-                           epochs=epochs,
-                           shuffle=True)
+            self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+            LOGGER.info(
+                f'Staring model training based on last {number_of_days} days price ' f'dataset ...'
+            )
+            self.model.fit(x_train, y_train, batch_size=1, epochs=epochs, shuffle=True)
             self.json_model_path.write_text(self.model.to_json())
             self.model.save_weights(filepath=f'{self.model_file_path}')
         self.model.summary()
@@ -97,11 +94,12 @@ class StockPredictionV1(StockPricePrediction):
         LOGGER.info("%s: %.2f%%" % (self.model.metrics_names[1], scores[1] * 100))
 
         # if you need to visualize the model layers
-        plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}",
-                   show_shapes=True)
+        plot_model(
+            self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}", show_shapes=True
+        )
 
         # Test data set
-        test_data = data_normalised[training_data_len - number_of_days:, :]
+        test_data = data_normalised[training_data_len - number_of_days :, :]
         # Create the x_test and y_test data sets
         x_test = []
         # Get all of the rows from index 1603 to the
@@ -109,7 +107,7 @@ class StockPredictionV1(StockPricePrediction):
         # so 2003 - 1603 = 400 rows of data
         y_test = dataset[training_data_len:, :]
         for i in range(number_of_days, len(test_data)):
-            x_test.append(test_data[i - number_of_days:i, 0])
+            x_test.append(test_data[i - number_of_days : i, 0])
         # LOGGER.info(tabulate(x_test[:10], headers="keys", tablefmt='sql'))
         # Convert x_test to a numpy array
         x_test = np.array(x_test)
@@ -161,10 +159,14 @@ class StockPredictionV1(StockPricePrediction):
                 pass
         total = len(valid_movement)
         accuracy = n / total
-        LOGGER.info(f'The accuracy of the LSTM Model predicting the movement of a stock each day '
-                    f'is {100 * round(accuracy, 3)}%')
-        dataframe = pd.DataFrame(list(zip(valid_movement, pred_movement)),
-                                 columns=['Valid Movement', 'Predicted Movement'])
+        LOGGER.info(
+            f'The accuracy of the LSTM Model predicting the movement of a stock each day '
+            f'is {100 * round(accuracy, 3)}%'
+        )
+        dataframe = pd.DataFrame(
+            list(zip(valid_movement, pred_movement)),
+            columns=['Valid Movement', 'Predicted Movement'],
+        )
         LOGGER.info(dataframe)
 
         # get predicted price for next day

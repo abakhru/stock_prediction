@@ -13,7 +13,6 @@ from stock_predictions.utils import pretty_print_df, visualize_price_history
 
 
 class DataUtils:
-
     def __init__(self):
         self.data_dir = ROOT.joinpath('data')
         self.data_normaliser = MinMaxScaler()
@@ -48,12 +47,14 @@ class DataUtils:
         if csv_path.exists():
             df = pd.read_csv(csv_path)
         else:
-            df = pandas_datareader.DataReader(name=stock_symbol,
-                                              data_source='yahoo',
-                                              start=start, end=end)
+            df = pandas_datareader.DataReader(
+                name=stock_symbol, data_source='yahoo', start=start, end=end
+            )
             df.to_csv(csv_path)
-        LOGGER.info(f"\n==== Stock price data for '{stock_symbol}' ===="
-                    f"\n{tabulate(df[:5], headers='keys', tablefmt='sql')}")
+        LOGGER.info(
+            f"\n==== Stock price data for '{stock_symbol}' ===="
+            f"\n{tabulate(df[:5], headers='keys', tablefmt='sql')}"
+        )
         # visualize_price_history(df)
         return df
 
@@ -71,7 +72,7 @@ class DataUtils:
         # predict the next open value
         temp = list()
         for i in range(len(data_normalised) - number_of_days):
-            temp.append(data_normalised[i: i + number_of_days].copy())
+            temp.append(data_normalised[i : i + number_of_days].copy())
         ohlcv_histories_normalised = np.array(temp)
 
         temp = list()
@@ -79,18 +80,21 @@ class DataUtils:
             temp.append(data_normalised[:, 0][i + number_of_days].copy())
         next_day_open_values_normalised = np.array(temp)
         next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
-        next_day_open_values = np.array([data[:, 0][i + number_of_days].copy()
-                                         for i in range(len(data) - number_of_days)])
+        next_day_open_values = np.array(
+            [data[:, 0][i + number_of_days].copy() for i in range(len(data) - number_of_days)]
+        )
         next_day_open_values = np.expand_dims(next_day_open_values, -1)
 
         y_normaliser = MinMaxScaler()
         y_normaliser.fit(next_day_open_values)
         assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0]
 
-        ret_values = [ohlcv_histories_normalised,
-                      next_day_open_values_normalised,
-                      next_day_open_values,
-                      y_normaliser]
+        ret_values = [
+            ohlcv_histories_normalised,
+            next_day_open_values_normalised,
+            next_day_open_values,
+            y_normaliser,
+        ]
 
         if with_tech_indicator:
             technical_indicators = []
@@ -101,7 +105,8 @@ class DataUtils:
                 technical_indicators.append(np.array([sma, macd]))
             technical_indicators = np.array(technical_indicators)
             technical_indicators_normalised = self.data_normaliser.fit_transform(
-                    technical_indicators)
+                technical_indicators
+            )
             assert ohlcv_histories_normalised.shape[0] == technical_indicators_normalised.shape[0]
             ret_values.append(technical_indicators_normalised)
             assert len(ret_values) == 5
@@ -121,15 +126,23 @@ class DataUtils:
 
         # using the last {number_of_days} open close high low volume data points,
         # predict the next open value
-        ohlcv_histories_normalised = np.array([data_normalised[i:i + number_of_days].copy() for i in
-                                               range(len(data_normalised) - number_of_days)])
+        ohlcv_histories_normalised = np.array(
+            [
+                data_normalised[i : i + number_of_days].copy()
+                for i in range(len(data_normalised) - number_of_days)
+            ]
+        )
         next_day_open_values_normalised = np.array(
-                [data_normalised[:, 0][i + number_of_days].copy() for i in
-                 range(len(data_normalised) - number_of_days)])
+            [
+                data_normalised[:, 0][i + number_of_days].copy()
+                for i in range(len(data_normalised) - number_of_days)
+            ]
+        )
         next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
 
-        next_day_open_values = np.array([data[:, 0][i + number_of_days].copy()
-                                         for i in range(len(data) - number_of_days)])
+        next_day_open_values = np.array(
+            [data[:, 0][i + number_of_days].copy() for i in range(len(data) - number_of_days)]
+        )
         next_day_open_values = np.expand_dims(next_day_open_values, -1)
 
         y_normaliser = MinMaxScaler()
@@ -145,10 +158,12 @@ class DataUtils:
                 ema_values.append(close * k + ema_values[-1] * (1 - k))
             return ema_values[-1]
 
-        ret_values = [ohlcv_histories_normalised,
-                      next_day_open_values_normalised,
-                      next_day_open_values,
-                      y_normaliser]
+        ret_values = [
+            ohlcv_histories_normalised,
+            next_day_open_values_normalised,
+            next_day_open_values,
+            y_normaliser,
+        ]
 
         if with_tech_indicator:
             technical_indicators = []
@@ -179,8 +194,13 @@ class DataUtils:
             if csv_file_path.name == test_set_name:
                 LOGGER.debug(f'Processing ... {csv_file_path}')
                 if type(ohlcv_histories) == int:
-                    (ohlcv_histories, technical_indicators,
-                     next_day_open_values, _, _) = self.csv_to_dataset(csv_file_path)
+                    (
+                        ohlcv_histories,
+                        technical_indicators,
+                        next_day_open_values,
+                        _,
+                        _,
+                    ) = self.csv_to_dataset(csv_file_path)
                 else:
                     a, b, c, _, _ = self.csv_to_dataset(csv_file_path)
                     ohlcv_histories = np.concatenate((ohlcv_histories, a), 0)
@@ -189,11 +209,19 @@ class DataUtils:
         ohlcv_train = ohlcv_histories
         tech_ind_train = technical_indicators
         y_train = next_day_open_values
-        (ohlcv_test, tech_ind_test, y_test,
-         unscaled_y_test, y_normaliser) = self.csv_to_dataset(self.data_dir.joinpath(test_set_name),
-                                                              number_of_days=number_of_days)
-        return (ohlcv_train, tech_ind_train, y_train, ohlcv_test,
-                tech_ind_test, y_test, unscaled_y_test, y_normaliser)
+        (ohlcv_test, tech_ind_test, y_test, unscaled_y_test, y_normaliser) = self.csv_to_dataset(
+            self.data_dir.joinpath(test_set_name), number_of_days=number_of_days
+        )
+        return (
+            ohlcv_train,
+            tech_ind_train,
+            y_train,
+            ohlcv_test,
+            tech_ind_test,
+            y_test,
+            unscaled_y_test,
+            y_normaliser,
+        )
 
 
 if __name__ == '__main__':
@@ -201,5 +229,4 @@ if __name__ == '__main__':
     # p.csv_to_dataset(stock='TSLA', number_of_days=60)
     # p.multiple_csv_to_dataset(test_set_name=['FB', 'AAPL', 'MSFT', 'AMZN', 'GOOGL'],
 
-    p.multiple_csv_to_dataset(test_set_name='TSLA_daily.csv',
-                              number_of_days=60)
+    p.multiple_csv_to_dataset(test_set_name='TSLA_daily.csv', number_of_days=60)

@@ -16,9 +16,11 @@ plt.style.use('fivethirtyeight')
 
 STOCK = 'AAPL'
 
-df = data_utils.get_yahoo_stock_data(stock_symbol=STOCK,
-                                     start=now.shift(years=-10).format('YYYY-MM-DD'),
-                                     end=now.shift(months=-10).format('YYYY-MM-DD'))
+df = data_utils.get_yahoo_stock_data(
+    stock_symbol=STOCK,
+    start=now.shift(years=-10).format('YYYY-MM-DD'),
+    end=now.shift(months=-10).format('YYYY-MM-DD'),
+)
 # visualize_price_history(df)
 
 # Create a dataframe with only the Close column
@@ -42,7 +44,7 @@ x_train = []
 y_train = []
 
 for i in range(60, len(train_data)):
-    x_train.append(train_data[i - 60:i, 0])
+    x_train.append(train_data[i - 60 : i, 0])
     y_train.append(train_data[i, 0])
     if i <= 60:
         print(x_train)
@@ -70,12 +72,12 @@ model.fit(x_train, y_train, batch_size=1, epochs=1)
 
 # Creating the testing data
 # Creating a new array containing a scaled value from index 1503 to 2003
-test_data = scaled_data[training_data_len - 60:, :]
+test_data = scaled_data[training_data_len - 60 :, :]
 # Create the data sets x_test and y_test
 x_test = []
 y_test = dataset[training_data_len:, :]
 for i in range(60, len(test_data)):
-    x_test.append(test_data[i - 60:i, 0])
+    x_test.append(test_data[i - 60 : i, 0])
 
 # convert data into numpy array
 x_test = np.array(x_test)
@@ -123,7 +125,7 @@ pred_price = scaler.inverse_transform(pred_price)
 print(pred_price)
 
 # get the quote
-apple_quote = data_utils.get_yahoo_stock_data(stock_symbol=STOCK,
-                                              start=now.shift(days=-1).format('YYYY-MM-DD'),
-                                              end=TODAY_DATE)
+apple_quote = data_utils.get_yahoo_stock_data(
+    stock_symbol=STOCK, start=now.shift(days=-1).format('YYYY-MM-DD'), end=TODAY_DATE
+)
 print(apple_quote['Close'])

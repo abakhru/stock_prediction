@@ -19,11 +19,9 @@ from stock_predictions.logger import LOGGER
 
 
 class LstmRNN:
-
     @property
     def model_name(self):
-        name = ("stock_rnn_lstm%d_step%d_input%d" %
-                (self.lstm_size, self.num_steps, self.input_size))
+        name = "stock_rnn_lstm%d_step%d_input%d" % (self.lstm_size, self.num_steps, self.input_size)
         if self.embed_size > 0:
             name += "_embed%d" % self.embed_size
         return name
@@ -42,14 +40,18 @@ class LstmRNN:
             os.makedirs(model_plots_dir)
         return model_plots_dir
 
-    def __init__(self, sess, stock_count,
-                 lstm_size=128,
-                 num_layers=1,
-                 num_steps=30,
-                 input_size=1,
-                 embed_size=None,
-                 logs_dir="logs",
-                 plots_dir="images"):
+    def __init__(
+        self,
+        sess,
+        stock_count,
+        lstm_size=128,
+        num_layers=1,
+        num_steps=30,
+        input_size=1,
+        embed_size=None,
+        logs_dir="logs",
+        plots_dir="images",
+    ):
         """
         Construct a RNN model using LSTM cell.
 
@@ -91,8 +93,9 @@ class LstmRNN:
         # Stock symbols are mapped to integers.
         self.symbols = tf.placeholder(tf.int32, [None, 1], name='stock_labels')
 
-        self.inputs = tf.placeholder(tf.float32, [None, self.num_steps, self.input_size],
-                                     name="inputs")
+        self.inputs = tf.placeholder(
+            tf.float32, [None, self.num_steps, self.input_size], name="inputs"
+        )
         self.targets = tf.placeholder(tf.float32, [None, self.input_size], name="targets")
 
         def _create_one_cell():
@@ -100,25 +103,30 @@ class LstmRNN:
             lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=self.keep_prob)
             return lstm_cell
 
-        cell = tf.contrib.rnn.MultiRNNCell(
-                [_create_one_cell() for _ in range(self.num_layers)],
-                state_is_tuple=True
-                ) if self.num_layers > 1 else _create_one_cell()
+        cell = (
+            tf.contrib.rnn.MultiRNNCell(
+                [_create_one_cell() for _ in range(self.num_layers)], state_is_tuple=True
+            )
+            if self.num_layers > 1
+            else _create_one_cell()
+        )
 
         if self.embed_size > 0 and self.stock_count > 1:
             self.embed_matrix = tf.Variable(
-                    tf.random_uniform([self.stock_count, self.embed_size], -1.0, 1.0),
-                    name="embed_matrix"
-                    )
+                tf.random_uniform([self.stock_count, self.embed_size], -1.0, 1.0),
+                name="embed_matrix",
+            )
 
             # stock_label_embeds.shape = (batch_size, embedding_size)
-            stacked_symbols = tf.tile(self.symbols, [1, self.num_steps],
-                                      name='stacked_stock_labels')
+            stacked_symbols = tf.tile(
+                self.symbols, [1, self.num_steps], name='stacked_stock_labels'
+            )
             stacked_embeds = tf.nn.embedding_lookup(self.embed_matrix, stacked_symbols)
 
             # After concat, inputs.shape = (batch_size, num_steps, input_size + embed_size)
-            self.inputs_with_embed = tf.concat([self.inputs, stacked_embeds], axis=2,
-                                               name="inputs_with_embed")
+            self.inputs_with_embed = tf.concat(
+                [self.inputs, stacked_embeds], axis=2, name="inputs_with_embed"
+            )
             self.embed_matrix_summ = tf.summary.histogram("embed_matrix", self.embed_matrix)
 
         else:
@@ -129,8 +137,9 @@ class LstmRNN:
         LOGGER.info("inputs_with_embed.shape:", self.inputs_with_embed.shape)
 
         # Run dynamic RNN
-        val, state_ = tf.nn.dynamic_rnn(cell, self.inputs_with_embed, dtype=tf.float32,
-                                        scope="dynamic_rnn")
+        val, state_ = tf.nn.dynamic_rnn(
+            cell, self.inputs_with_embed, dtype=tf.float32, scope="dynamic_rnn"
+        )
 
         # Before transpose, val.get_shape() = (batch_size, num_steps, lstm_size)
         # After transpose, val.get_shape() = (num_steps, batch_size, lstm_size)
@@ -148,8 +157,9 @@ class LstmRNN:
 
         # self.loss = -tf.reduce_sum(targets * tf.log(tf.clip_by_value(prediction, 1e-10, 1.0)))
         self.loss = tf.reduce_mean(tf.square(self.pred - self.targets), name="loss_mse_train")
-        self.optim = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.loss,
-                                                                            name="rmsprop_optim")
+        self.optim = tf.train.RMSPropOptimizer(self.learning_rate).minimize(
+            self.loss, name="rmsprop_optim"
+        )
 
         # Separated from train loss.
         self.loss_test = tf.reduce_mean(tf.square(self.pred - self.targets), name="loss_mse_test")
@@ -183,8 +193,10 @@ class LstmRNN:
             added_embed = projector_config.embeddings.add()
             added_embed.tensor_name = self.embed_matrix.name
             # Link this tensor to its metadata file (e.g. labels).
-            shutil.copyfile(os.path.join(self.logs_dir, "metadata.tsv"),
-                            os.path.join(self.model_logs_dir, "metadata.tsv"))
+            shutil.copyfile(
+                os.path.join(self.logs_dir, "metadata.tsv"),
+                os.path.join(self.model_logs_dir, "metadata.tsv"),
+            )
             added_embed.metadata_path = "metadata.tsv"
 
             # The next line writes a projector_config.pbtxt in the LOG_DIR. TensorBoard will
@@ -217,7 +229,7 @@ class LstmRNN:
             self.inputs: merged_test_X,
             self.targets: merged_test_y,
             self.symbols: merged_test_labels,
-            }
+        }
 
         global_step = 0
 
@@ -229,9 +241,9 @@ class LstmRNN:
         sample_indices = {}
         for l in sample_labels:
             sym = dataset_list[l].stock_sym
-            target_indices = np.array([
-                i for i, sym_label in enumerate(merged_test_labels)
-                if sym_label[0] == l])
+            target_indices = np.array(
+                [i for i, sym_label in enumerate(merged_test_labels) if sym_label[0] == l]
+            )
             sample_indices[sym] = target_indices
         LOGGER.info(sample_indices)
 
@@ -239,7 +251,7 @@ class LstmRNN:
         for epoch in range(config.max_epoch):
             epoch_step = 0
             learning_rate = config.init_learning_rate * (
-                    config.learning_rate_decay ** max(float(epoch + 1 - config.init_epoch), 0.0)
+                config.learning_rate_decay ** max(float(epoch + 1 - config.init_epoch), 0.0)
             )
 
             for label_, d_ in enumerate(dataset_list):
@@ -253,27 +265,35 @@ class LstmRNN:
                         self.inputs: batch_X,
                         self.targets: batch_y,
                         self.symbols: batch_labels,
-                        }
+                    }
                     train_loss, _, train_merged_sum = self.sess.run(
-                            [self.loss, self.optim, self.merged_sum], train_data_feed)
+                        [self.loss, self.optim, self.merged_sum], train_data_feed
+                    )
                     self.writer.add_summary(train_merged_sum, global_step=global_step)
 
                     if np.mod(global_step, len(dataset_list) * 200 / config.input_size) == 1:
-                        test_loss, test_pred = self.sess.run([self.loss_test, self.pred],
-                                                             test_data_feed)
-                        LOGGER.info("Step:%d [Epoch:%d] [Learning rate: %.6f] "
-                                    "train_loss:%.6f test_loss:%.6f" %
-                                    (global_step, epoch, learning_rate, train_loss, test_loss))
+                        test_loss, test_pred = self.sess.run(
+                            [self.loss_test, self.pred], test_data_feed
+                        )
+                        LOGGER.info(
+                            "Step:%d [Epoch:%d] [Learning rate: %.6f] "
+                            "train_loss:%.6f test_loss:%.6f"
+                            % (global_step, epoch, learning_rate, train_loss, test_loss)
+                        )
 
                         # Plot samples
                         for sample_sym, indices in sample_indices.items():
-                            image_path = os.path.join(self.model_plots_dir,
-                                                      "{}_epoch{:02d}_step{:04d}.png".format(
-                                                              sample_sym, epoch, epoch_step))
+                            image_path = os.path.join(
+                                self.model_plots_dir,
+                                "{}_epoch{:02d}_step{:04d}.png".format(
+                                    sample_sym, epoch, epoch_step
+                                ),
+                            )
                             sample_preds = test_pred[indices]
                             sample_truth = merged_test_y[indices]
-                            self.plot_samples(sample_preds, sample_truth, image_path,
-                                              stock_sym=sample_sym)
+                            self.plot_samples(
+                                sample_preds, sample_truth, image_path, stock_sym=sample_sym
+                            )
                         self.save(global_step)
         final_pred, final_loss = self.sess.run([self.pred, self.loss], test_data_feed)
         # Save the final model
@@ -282,9 +302,7 @@ class LstmRNN:
 
     def save(self, step):
         model_name = f'{self.model_name}.model'
-        self.saver.save(self.sess,
-                        os.path.join(self.model_logs_dir, model_name),
-                        global_step=step)
+        self.saver.save(self.sess, os.path.join(self.model_logs_dir, model_name), global_step=step)
 
     def load(self):
         LOGGER.info(" [*] Reading checkpoints...")
@@ -302,6 +320,7 @@ class LstmRNN:
     def plot_samples(self, preds, targets, figname, stock_sym=None, multiplier=5):
         def _flatten(seq):
             return np.array([x for y in seq for x in y])
+
         truths = _flatten(targets)[-200:]
         preds = (_flatten(preds) * multiplier)[-200:]
         days = list(range(len(truths)))[-200:]

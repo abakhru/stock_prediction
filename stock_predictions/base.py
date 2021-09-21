@@ -27,10 +27,12 @@ from stock_predictions.utils import pretty_print_df
 
 
 class StockPricePrediction(DataUtils):
-
-    def __init__(self, stock_symbol='FB',
-                 start_date="2010-01-01",
-                 end_date=datetime.now().strftime("%Y-%m-%d")):
+    def __init__(
+        self,
+        stock_symbol='FB',
+        start_date="2010-01-01",
+        end_date=datetime.now().strftime("%Y-%m-%d"),
+    ):
         self.stock_symbol = stock_symbol
         self.start_date = start_date
         self.end_date = end_date
@@ -40,10 +42,12 @@ class StockPricePrediction(DataUtils):
         self.data_dir = ROOT / 'data'
         self.model_dir.mkdir(exist_ok=True)
         self.data_dir.mkdir(exist_ok=True)
-        self.json_model_path = self.model_dir.joinpath(f'{self.stock_symbol.lower()}_'
-                                                       f'{TODAY_DATE}_model.json')
-        self.model_file_path = self.model_dir.joinpath(f'{self.stock_symbol.lower()}_'
-                                                       f'{TODAY_DATE}_model.h5')
+        self.json_model_path = self.model_dir.joinpath(
+            f'{self.stock_symbol.lower()}_' f'{TODAY_DATE}_model.json'
+        )
+        self.model_file_path = self.model_dir.joinpath(
+            f'{self.stock_symbol.lower()}_' f'{TODAY_DATE}_model.h5'
+        )
 
     def plot_moving_avg(self, n_forward=40):
         """Plats best moving average of the given stock symbol
@@ -78,13 +82,19 @@ class StockPricePrediction(DataUtils):
             mean_forward_return_training = tr_returns.mean()
             mean_forward_return_test = test_returns.mean()
             pvalue = ttest_ind(tr_returns, test_returns, equal_var=False)[1]
-            result.append({'sma_length': sma_length,
-                           'training_forward_return': mean_forward_return_training,
-                           'test_forward_return': mean_forward_return_test,
-                           'p-value': pvalue})
+            result.append(
+                {
+                    'sma_length': sma_length,
+                    'training_forward_return': mean_forward_return_training,
+                    'test_forward_return': mean_forward_return_test,
+                    'p-value': pvalue,
+                }
+            )
         result.sort(key=lambda x: -x['training_forward_return'])
-        LOGGER.info(f'Top 2 Results for "{n_forward}" days:\n'
-                    f'{json.dumps(result[:2], indent=4, sort_keys=True)}')
+        LOGGER.info(
+            f'Top 2 Results for "{n_forward}" days:\n'
+            f'{json.dumps(result[:2], indent=4, sort_keys=True)}'
+        )
         best_sma = result[0]['sma_length']
         data['SMA'] = data['Close'].rolling(best_sma).mean()
         plt.plot(data['Close'], label=self.stock_symbol)
@@ -93,8 +103,12 @@ class StockPricePrediction(DataUtils):
         plt.plot(data['Close'].rolling(200).mean(), label="200-periods SMA")  # long-term
         plt.plot(data['SMA'], label=f"{best_sma} periods SMA")
         plt.legend()
-        plt.xlim((datetime.strptime(self.start_date, '%Y-%m-%d').date(),
-                  datetime.strptime(self.end_date, '%Y-%m-%d').date()))
+        plt.xlim(
+            (
+                datetime.strptime(self.start_date, '%Y-%m-%d').date(),
+                datetime.strptime(self.end_date, '%Y-%m-%d').date(),
+            )
+        )
         plt.show()
 
     def test_prediction(self, end_date='2019-12-18'):
@@ -120,5 +134,7 @@ class StockPricePrediction(DataUtils):
         # undo the scaling
         pred_price = self.data_normaliser.inverse_transform(pred_price)
         pretty_print_df(pred_price)
-        LOGGER.info(f"[{self.stock_symbol}:{end_date}] Predicted: Actual ==> "
-                    f"{pred_price[0][0]}: {last_60_days[-1][0]}")
+        LOGGER.info(
+            f"[{self.stock_symbol}:{end_date}] Predicted: Actual ==> "
+            f"{pred_price[0][0]}: {last_60_days[-1][0]}"
+        )
