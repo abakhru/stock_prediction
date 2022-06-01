@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import datetime
-import math
 from pathlib import Path
 
+import math
 import numpy as np
 import pandas as pd
 import requests

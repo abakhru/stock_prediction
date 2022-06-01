@@ -11,9 +11,10 @@ import torch
 import torch.nn.functional as F
 from torch import nn, optim
 from torch.autograd import Variable
-# torch.cpu.is_available()
 
 from stock_predictions import ROOT
+
+# torch.cpu.is_available()
 
 matplotlib.use('Agg')
 
@@ -36,9 +37,9 @@ def read_data(input_path):
     """
     df = pd.read_csv(input_path)
     df_no_date = df.drop(["Close", 'Date'], axis=1)
-    X = df_no_date.values
+    x = df_no_date.values
     y = df['Close'].values
-    return X, y
+    return x, y
 
 
 class Encoder(nn.Module):
@@ -47,7 +48,7 @@ class Encoder(nn.Module):
                  input_size,
                  encoder_num_hidden,
                  parallel=False):
-        super(Encoder, self).__init__()
+        super().__init__()
         self.encoder_num_hidden = encoder_num_hidden
         self.input_size = input_size
         self.parallel = parallel
@@ -71,7 +72,6 @@ class Encoder(nn.Module):
 
         Args:
             X
-
         """
         X_tilde = Variable(X.data.new(X.size(0), self.T - 1, self.input_size).zero_())
         X_encoded = Variable(X.data.new(X.size(0), self.T - 1, self.encoder_num_hidden).zero_())
@@ -162,7 +162,7 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
 
     def __init__(self, T, decoder_num_hidden, encoder_num_hidden):
-        super(Decoder, self).__init__()
+        super().__init__()
         self.decoder_num_hidden = decoder_num_hidden
         self.encoder_num_hidden = encoder_num_hidden
         self.T = T
@@ -234,8 +234,7 @@ class DSTP_rnn(nn.Module):
                  learning_rate,
                  epochs,
                  parallel=False):
-
-        super(DSTP_rnn, self).__init__()
+        super().__init__()
         self.encoder_num_hidden = encoder_num_hidden
         self.decoder_num_hidden = decoder_num_hidden
         self.learning_rate = learning_rate
@@ -315,7 +314,8 @@ class DSTP_rnn(nn.Module):
                         param_group['lr'] = param_group['lr'] * 0.9
                     for param_group in self.decoder_optimizer.param_groups:
                         param_group['lr'] = param_group['lr'] * 0.9
-                self.epoch_losses[epoch] = np.mean(self.iter_losses[range(epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)])
+                self.epoch_losses[epoch] = np.mean(self.iter_losses[range(epoch * iter_per_epoch,
+                                                                          (epoch + 1) * iter_per_epoch)])
 
             if epoch % 10 == 0:
                 print("Epochs: ", epoch, " Iterations: ", n_iter, " Loss: ",
@@ -388,9 +388,9 @@ class DSTP_rnn(nn.Module):
 
 
 if __name__ == '__main__':
-    X, y = read_data(f"{ROOT}/data/2324.TW.csv")
-    model = DSTP_rnn(X, y, 10, 128, 128, 128, 0.001, epochs=100)
-    # model = DSTP_rnn(X, y, 10, 128, 128, 128, 0.001, epochs=7000)
+    x, y = read_data(f"{ROOT}/data/2324.TW.csv")
+    model = DSTP_rnn(x, y, 10, 128, 128, 128, 0.001, epochs=100)
+    # model = DSTP_rnn(x, y, 10, 128, 128, 128, 0.001, epochs=7000)
     model.train()
     torch.save(model.state_dict(), f=f'{ROOT}/models/dstprnn_model.pkl')
     # model = torch.load(f'{ROOT}/models/dstprnn_model.pkl')

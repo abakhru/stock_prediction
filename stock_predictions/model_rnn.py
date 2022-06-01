@@ -8,11 +8,11 @@ import os
 import random
 import re
 import shutil
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import time
 from tensorflow.contrib.tensorboard.plugins import projector
 
 from stock_predictions.logger import LOGGER
@@ -302,6 +302,7 @@ class LstmRNN:
     def plot_samples(self, preds, targets, figname, stock_sym=None, multiplier=5):
         def _flatten(seq):
             return np.array([x for y in seq for x in y])
+
         truths = _flatten(targets)[-200:]
         preds = (_flatten(preds) * multiplier)[-200:]
         days = list(range(len(truths)))[-200:]

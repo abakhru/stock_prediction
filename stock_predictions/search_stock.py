@@ -85,12 +85,14 @@ def main(stock, exchange):
 
 
 if __name__ == '__main__':
-    m = ROOT.joinpath('data', 't.txt').read_text().splitlines()
-    s = [i.split(' ', 1)[1:] for i in m]
-    b = [i[0].strip() for i in s]
-    c = [i.split('EQ')[0].replace('-', '') for i in b]
-    for i in c:
-        p = SearchStockSymbol(company_name=i, exchange='NSE')
-        p.ticker_details()
+    # m = ROOT.joinpath('data', 't.txt').read_text().splitlines()
+    # s = [i.split(' ', 1)[1:] for i in m]
+    # b = [i[0].strip() for i in s]
+    # c = [i.split('EQ')[0].replace('-', '') for i in b]
+    # for i in c:
+    #     p = SearchStockSymbol(company_name=i, exchange='NSE')
+    #     p.ticker_details()
+    p = SearchStockSymbol(company_name='Reliance Communications', exchange='NSE')
+    p.ticker_details()
     LOGGER.info(pretty_print_df(final_df.drop_duplicates()))
     # main()

@@ -43,8 +43,8 @@ class StockPredictionV2(StockPricePrediction):
         """
         (ohlcv_histories, next_day_open_values,
          unscaled_y, y_normaliser) = self.csv_to_dataset(
-            csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
-            number_of_days=number_of_days)
+                csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
+                number_of_days=number_of_days)
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -112,9 +112,9 @@ class StockPredictionV2(StockPricePrediction):
         """
         (ohlcv_histories, next_day_open_values, unscaled_y,
          y_normaliser, technical_indicators) = self.csv_to_dataset(
-            csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
-            number_of_days=number_of_days,
-            with_tech_indicator=True)
+                csv_path=self.data_dir.joinpath(f'{self.stock_symbol}_daily.csv'),
+                number_of_days=number_of_days,
+                with_tech_indicator=True)
 
         test_split = 0.9  # the percent of data to be used for testing
         n = int(ohlcv_histories.shape[0] * test_split)
@@ -291,7 +291,7 @@ class StockPredictionV2(StockPricePrediction):
             normalised_price_today = np.array([[normalised_price_today]])
             price_today = y_normaliser.inverse_transform(normalised_price_today)
             predicted = np.squeeze(y_normaliser.inverse_transform(self.model.predict([[ohlcv],
-                                                                                   [ind]])))
+                                                                                      [ind]])))
             delta = predicted - price_today
             # print(delta)
             if delta > thresh:

@@ -106,3 +106,4 @@ ENV/
 .idea/
 models/
 data/
+err

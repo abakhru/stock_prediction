@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 from stock_predictions import ALPHA_VANTAGE_APIKEY, ROOT, TODAY_DATE
 from stock_predictions.logger import LOGGER
-from stock_predictions.utils import pretty_print_df, visualize_price_history
+from stock_predictions.utils import pretty_print_df
 
 
 class DataUtils:

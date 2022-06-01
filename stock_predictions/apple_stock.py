@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import math
-
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.layers import Dense, LSTM

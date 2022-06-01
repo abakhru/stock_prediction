@@ -6,11 +6,11 @@ __version__ = '0.1.0'
 
 import logging
 import os
-import sys
 import warnings
 from pathlib import Path
 
 import arrow
+import sys
 
 if not sys.warnoptions:
     warnings.simplefilter('ignore')
