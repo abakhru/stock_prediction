@@ -2,8 +2,8 @@
 
 ### setup
 ```
-./quick_start.sh
-python stock_predictions/main.py -s TSLA -e 5 --v1
+make venv
+make run
 ```
 
 ### TODO

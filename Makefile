@@ -13,10 +13,7 @@ help:
 
 ## build the python virtual env for the project
 venv:
-	if [ ! -d "env" ]; then python3 -m venv env; fi
-	env/bin/pip install -U pip setuptools wheel;
-	env/bin/pip install -e .;
-	# env/bin/pip install -r requirements.txt
+	poetry install
 
 ## make clean
 clean:
@@ -28,8 +25,8 @@ clean:
 
 ## lint python files using black
 lint:
-	black -S -l 100 .
+	poetry run black -S -l 100 .
 
 ## run stock prediction
 run:
-	env/bin/python stock_predictions/main.py -s TSLA -e 5 --v1
+	poetry run python stock_predictions/main.py -s TSLA -e 5 --v1
