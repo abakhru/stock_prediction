@@ -5,7 +5,7 @@ description = "stock predications based on LSTM model"
 authors = ["abakhru <bakhru@me.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.11"
 bump2version = "^1.0.1"
 watchdog = "^2.1.8"
 coverage = "^6.4"
@@ -14,12 +14,13 @@ click = "^8.1.3"
 yfinance = "^0.1.70"
 pandas-datareader = "^0.10.0"
 sklearn = "^0.0"
-keras = "~=2.4.3"
+keras = "^2.4.3"
 pydot = "^1.4.2"
 graphviz = "^0.20"
 alpha-vantage = "^2.3.1"
-matplotlib = "~=3.4.3"
+matplotlib = "^3.4.3"
 arrow = "^1.2.3"
+tensorflow = "2.9.0"
 
 [tool.poetry.dev-dependencies]
 
