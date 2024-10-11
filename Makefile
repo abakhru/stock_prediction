@@ -13,7 +13,9 @@ help:
 
 ## build the python virtual env for the project
 venv:
-	poetry install
+	uv venv --seed --python 3.12.4
+	uv pip install pip setuptools wheel poetry
+	.venv/bin/poetry install
 
 ## make clean
 clean:
