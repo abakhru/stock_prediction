@@ -13,9 +13,8 @@ help:
 
 ## build the python virtual env for the project
 venv:
-	uv venv --seed --python 3.12.4
-	uv pip install pip setuptools wheel poetry
-	.venv/bin/poetry install
+	uv sync
+	uv lock -U
 
 ## make clean
 clean:
@@ -25,10 +24,10 @@ clean:
 	find . -name '*.egg-info' -exec rm -rf {} +
 	find . -name '*.egg' -exec rm -f {} +
 
-## lint python files using black
+## lint python files using Ruff
 lint:
-	poetry run black -S -l 100 .
+	uv run ruff check --fix --unsafe-fixes stock_predictions
 
 ## run stock prediction
 run:
-	poetry run python stock_predictions/main.py -s TSLA -e 5 --v1
+	uv run python stock_predictions/main.py -s TSLA -e 5 --v1

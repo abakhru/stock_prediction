@@ -5,7 +5,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from keras.layers import Dense, LSTM
+from keras.layers import LSTM, Dense
 from keras.models import Sequential
 from sklearn.metrics import mean_squared_error
 from tensorflow.python.keras.models import model_from_json
@@ -18,7 +18,7 @@ from stock_predictions.logger import LOGGER
 class StockPredictionV1(StockPricePrediction):
     def __init__(
         self,
-        stock_symbol='FB',
+        stock_symbol="FB",
         start_date="2010-01-01",
         end_date=datetime.now().strftime("%Y-%m-%d"),
         reset=False,
@@ -27,10 +27,10 @@ class StockPredictionV1(StockPricePrediction):
         self.valid = None
         self.data = None
         self.rmse = None
-        self.json_model_path = self.json_model_path.with_suffix('.v1.json')
-        self.model_file_path = self.json_model_path.with_suffix('.v1.h5')
+        self.json_model_path = self.json_model_path.with_suffix(".v1.json")
+        self.model_file_path = self.json_model_path.with_suffix(".v1.h5")
         if reset:
-            LOGGER.debug('Deleting all model related files')
+            LOGGER.debug("Deleting all model related files")
             self.model_file_path.unlink(missing_ok=True)
             self.json_model_path.unlink(missing_ok=True)
 
@@ -45,7 +45,7 @@ class StockPredictionV1(StockPricePrediction):
         """
         df = self.get_yahoo_stock_data(self.stock_symbol, self.start_date, self.end_date)
         # Create a new dataframe with only the 'Close' column
-        self.data = df.filter(['Close'])
+        self.data = df.filter(["Close"])
         # Converting the dataframe to a numpy array
         dataset = self.data.values
         # Get /Compute the number of rows to train the model on
@@ -69,10 +69,10 @@ class StockPredictionV1(StockPricePrediction):
         self.model = Sequential()
         if self.model_file_path.exists() and self.json_model_path.exists():
             self.model = model_from_json(self.json_model_path.read_text())
-            self.model.load_weights(f'{self.model_file_path}')
+            self.model.load_weights(f"{self.model_file_path}")
             # self.model.compile(optimizer='adam', loss='mean_squared_error')
             self.model.compile(
-                loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy']
+                loss="binary_crossentropy", optimizer="rmsprop", metrics=["accuracy"]
             )
         else:
             self.model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
@@ -82,13 +82,13 @@ class StockPredictionV1(StockPricePrediction):
             # self.model.compile(loss='binary_crossentropy',
             #                    optimizer='rmsprop',
             #                    metrics=['accuracy'])
-            self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+            self.model.compile(optimizer="adam", loss="mean_squared_error", metrics=["accuracy"])
             LOGGER.info(
-                f'Staring model training based on last {number_of_days} days price ' f'dataset ...'
+                f"Staring model training based on last {number_of_days} days price " f"dataset ..."
             )
             self.model.fit(x_train, y_train, batch_size=1, epochs=epochs, shuffle=True)
             self.json_model_path.write_text(self.model.to_json())
-            self.model.save_weights(filepath=f'{self.model_file_path}')
+            self.model.save_weights(filepath=f"{self.model_file_path}")
         self.model.summary()
         scores = self.model.evaluate(x_train, y_train, verbose=0)
         LOGGER.info("%s: %.2f%%" % (self.model.metrics_names[1], scores[1] * 100))
@@ -118,22 +118,22 @@ class StockPredictionV1(StockPricePrediction):
         predictions = self.data_normaliser.inverse_transform(predictions)  # Undo scaling
         # Calculate/Get the value of RMSE (Root Mean Squared Error)
         self.rmse = np.sqrt(np.mean(((predictions - y_test) ** 2)))
-        LOGGER.warning(f'Root Mean Squared Error: {self.rmse}')
+        LOGGER.warning(f"Root Mean Squared Error: {self.rmse}")
         # Plot/Create the data for the graph
         train = self.data[:training_data_len]
         self.valid = self.data[training_data_len:]
-        self.valid['Predictions'] = predictions
+        self.valid["Predictions"] = predictions
         # Visualize the data
-        plt.style.use('ggplot')
+        plt.style.use("ggplot")
         plt.figure(figsize=(16, 8))
-        plt.title(f'Model for {self.stock_symbol.upper()}')
-        plt.xlabel('Date', fontsize=18)
-        plt.ylabel('Close Price USD ($)', fontsize=18)
-        plt.plot(train['Close'])
-        plt.plot(self.valid[['Close', 'Predictions']])
-        plt.legend(['Train', 'Valid', 'Predictions'], loc='lower right')
+        plt.title(f"Model for {self.stock_symbol.upper()}")
+        plt.xlabel("Date", fontsize=18)
+        plt.ylabel("Close Price USD ($)", fontsize=18)
+        plt.plot(train["Close"])
+        plt.plot(self.valid[["Close", "Predictions"]])
+        plt.legend(["Train", "Valid", "Predictions"], loc="lower right")
         plt.show()
-        LOGGER.info(f'\n==== Predicted Price ====\n{self.valid[:-5]}')
+        LOGGER.info(f"\n==== Predicted Price ====\n{self.valid[:-5]}")
 
     def find_accuracy(self):
         """find the accuracy based on predicting day-to-day movements"""
@@ -160,12 +160,12 @@ class StockPredictionV1(StockPricePrediction):
         total = len(valid_movement)
         accuracy = n / total
         LOGGER.info(
-            f'The accuracy of the LSTM Model predicting the movement of a stock each day '
-            f'is {100 * round(accuracy, 3)}%'
+            f"The accuracy of the LSTM Model predicting the movement of a stock each day "
+            f"is {100 * round(accuracy, 3)}%"
         )
         dataframe = pd.DataFrame(
             list(zip(valid_movement, pred_movement)),
-            columns=['Valid Movement', 'Predicted Movement'],
+            columns=["Valid Movement", "Predicted Movement"],
         )
         LOGGER.info(dataframe)
 
@@ -184,6 +184,6 @@ class StockPredictionV1(StockPricePrediction):
 
         # get stats
         # Root mean squared error
-        LOGGER.info(f'The root mean squared error is {round(self.rmse, 2)}')
-        error = mean_squared_error(self.valid['Close'].tolist(), self.valid['Predictions'].tolist())
-        LOGGER.info('Testing Mean Squared Error: %.3f' % error)
+        LOGGER.info(f"The root mean squared error is {round(self.rmse, 2)}")
+        error = mean_squared_error(self.valid["Close"].tolist(), self.valid["Predictions"].tolist())
+        LOGGER.info("Testing Mean Squared Error: %.3f" % error)

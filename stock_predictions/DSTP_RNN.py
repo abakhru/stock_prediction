@@ -13,10 +13,9 @@ from torch import nn, optim
 from torch.autograd import Variable
 
 # torch.cpu.is_available()
-
 from stock_predictions import ROOT
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 
 
 def count_values(truth, pred):
@@ -36,9 +35,9 @@ def read_data(input_path):
         y (np.ndarray): ground truth.
     """
     df = pd.read_csv(input_path)
-    df_no_date = df.drop(["Close", 'Date'], axis=1)
+    df_no_date = df.drop(["Close", "Date"], axis=1)
     X = df_no_date.values
-    y = df['Close'].values
+    y = df["Close"].values
     return X, y
 
 
@@ -72,8 +71,8 @@ class Encoder(nn.Module):
             X
 
         """
-        X_tilde = Variable(X.data.new(X.size(0), self.T - 1, self.input_size).zero_())
-        X_encoded = Variable(X.data.new(X.size(0), self.T - 1, self.encoder_num_hidden).zero_())
+        Variable(X.data.new(X.size(0), self.T - 1, self.input_size).zero_())
+        Variable(X.data.new(X.size(0), self.T - 1, self.encoder_num_hidden).zero_())
 
         X_tilde2 = Variable(X.data.new(X.size(0), self.T - 1, self.input_size).zero_())
         X_encoded2 = Variable(X.data.new(X.size(0), self.T - 1, self.encoder_num_hidden).zero_())
@@ -296,7 +295,6 @@ class DSTP_rnn(nn.Module):
         self.epoch_losses = np.zeros(self.epochs)
         n_iter = 0
 
-        val_record = 0
 
         for epoch in range(self.epochs):
             if self.shuffle:
@@ -327,9 +325,9 @@ class DSTP_rnn(nn.Module):
 
                 if n_iter % 10000 == 0 and n_iter != 0:
                     for param_group in self.encoder_optimizer.param_groups:
-                        param_group['lr'] = param_group['lr'] * 0.9
+                        param_group["lr"] = param_group["lr"] * 0.9
                     for param_group in self.decoder_optimizer.param_groups:
-                        param_group['lr'] = param_group['lr'] * 0.9
+                        param_group["lr"] = param_group["lr"] * 0.9
                 self.epoch_losses[epoch] = np.mean(
                     self.iter_losses[range(epoch * iter_per_epoch, (epoch + 1) * iter_per_epoch)]
                 )
@@ -339,7 +337,7 @@ class DSTP_rnn(nn.Module):
                     "Epochs: ", epoch, " Iterations: ", n_iter, " Loss: ", self.epoch_losses[epoch]
                 )
             if epoch % 1000 == 0 and epoch != 0:
-                torch.save(model.state_dict(), f'{ROOT}/models/dstprnn_model_{epoch}.pkl')
+                torch.save(model.state_dict(), f"{ROOT}/models/dstprnn_model_{epoch}.pkl")
 
     def train_forward(self, X, y_prev, y_gt):
         # zero gradients
@@ -413,12 +411,12 @@ class DSTP_rnn(nn.Module):
         return y_pred_price
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     X, y = read_data(f"{ROOT}/data/2324.TW.csv")
     model = DSTP_rnn(X, y, 10, 128, 128, 128, 0.001, epochs=100)
     # model = DSTP_rnn(X, y, 10, 128, 128, 128, 0.001, epochs=7000)
     model.train()
-    torch.save(model.state_dict(), f=f'{ROOT}/models/dstprnn_model.pkl')
+    torch.save(model.state_dict(), f=f"{ROOT}/models/dstprnn_model.pkl")
     # model = torch.load(f'{ROOT}/models/dstprnn_model.pkl')
     pred = model.test()
     print(pred)

@@ -1,29 +1,51 @@
-[tool.poetry]
+[project]
 name = "stock_predictions"
 version = "0.1.0"
-description = "stock predications based on LSTM model"
-authors = ["abakhru <bakhru@me.com>"]
-
-[tool.poetry.dependencies]
-python = ">3.12"
-bump2version = "*"
-watchdog = "*"
-coverage = "*"
-twine = "*"
-click = "*"
-yfinance = "*"
-pandas-datareader = "*"
-keras = "*"
-pydot = "*"
-graphviz = "*"
-alpha-vantage = "*"
-matplotlib = "*"
-arrow = "*"
-#tensorflow = "*"
-scikit-learn = "*"
-
-[poetry.group.dev.dependencies]
+description = "LSTM Model based stock price prediction"
+readme = "README.md"
+authors = [{name = "Amit Bakhru", email = "bakhru@me.com"}]
+license = {text = "MIT"}
+keywords = ["stock_predictions"]
+requires-python = ">=3.9"
+dependencies = [
+    "bump2version",
+    "watchdog",
+    "coverage",
+    "twine",
+    "click",
+    "yfinance",
+    "pandas-datareader",
+    "keras",
+    "pydot",
+    "graphviz",
+    "alpha-vantage",
+    "matplotlib",
+    "arrow",
+    "scikit-learn",
+    "ruff",
+    "isort",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9"
+]
+urls = { "Homepage" = "https://github.com/abakhru/stock_prediction" }
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "Q", "I"]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "double"
+multiline-quotes = "double"
+docstring-quotes = "double"

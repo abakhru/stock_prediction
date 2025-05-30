@@ -69,7 +69,8 @@ template = """<!DOCTYPE html>
   <!-- TradingView Widget BEGIN -->
   <div class="tradingview-widget-container">
     <div id="tradingview_63a66"></div>
-    <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/symbols/AAPL/" rel="noopener" target="_blank"><span class="blue-text">AAPL Chart</span></a> by TradingView</div>
+    <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/symbols/AAPL/" rel="noopener"  \
+      target="_blank"><span class="blue-text">AAPL Chart</span></a> by TradingView</div>
   </div>
   <!-- TradingView Widget END -->
   </div>

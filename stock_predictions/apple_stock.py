@@ -4,7 +4,7 @@ import math
 
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.layers import Dense, LSTM
+from keras.layers import LSTM, Dense
 from keras.models import Sequential
 from sklearn.preprocessing import MinMaxScaler
 
@@ -12,19 +12,19 @@ from stock_predictions import TODAY_DATE, now
 from stock_predictions.data_utils import DataUtils
 
 data_utils = DataUtils()
-plt.style.use('fivethirtyeight')
+plt.style.use("fivethirtyeight")
 
-STOCK = 'AAPL'
+STOCK = "AAPL"
 
 df = data_utils.get_yahoo_stock_data(
     stock_symbol=STOCK,
-    start=now.shift(years=-10).format('YYYY-MM-DD'),
-    end=now.shift(months=-10).format('YYYY-MM-DD'),
+    start=now.shift(years=-10).format("YYYY-MM-DD"),
+    end=now.shift(months=-10).format("YYYY-MM-DD"),
 )
 # visualize_price_history(df)
 
 # Create a dataframe with only the Close column
-data = df.filter(['Close'])
+data = df.filter(["Close"])
 # Convert dataframe into numpy value
 dataset = data.values
 
@@ -65,7 +65,7 @@ model.add(Dense(25))
 model.add(Dense(1))
 
 # compile the model
-model.compile(optimizer='adam', loss='mean_squared_error')
+model.compile(optimizer="adam", loss="mean_squared_error")
 
 # Train a model
 model.fit(x_train, y_train, batch_size=1, epochs=1)
@@ -95,15 +95,15 @@ rmse = np.sqrt(np.mean(predictions - y_test) ** 2)
 # plot the data
 train = data[:training_data_len]
 valid = data[training_data_len:]
-valid['Predictions'] = predictions
+valid["Predictions"] = predictions
 # Visualize the data
 plt.figure(figsize=(16, 8))
-plt.title(f'Prediction Model for {STOCK}')
-plt.xlabel('Date', fontsize=18)
-plt.ylabel('Close Price USD', fontsize=18)
-plt.plot(train['Close'])
-plt.plot(valid[['Close', 'Predictions']])
-plt.legend(['Train', 'Actual', 'Predictions'], loc='lower right')
+plt.title(f"Prediction Model for {STOCK}")
+plt.xlabel("Date", fontsize=18)
+plt.ylabel("Close Price USD", fontsize=18)
+plt.plot(train["Close"])
+plt.plot(valid[["Close", "Predictions"]])
+plt.legend(["Train", "Actual", "Predictions"], loc="lower right")
 plt.show()
 
 # Get the last 60 day closing price value and covert into dataframe to an array
@@ -126,6 +126,6 @@ print(pred_price)
 
 # get the quote
 apple_quote = data_utils.get_yahoo_stock_data(
-    stock_symbol=STOCK, start=now.shift(days=-1).format('YYYY-MM-DD'), end=TODAY_DATE
+    stock_symbol=STOCK, start=now.shift(days=-1).format("YYYY-MM-DD"), end=TODAY_DATE
 )
-print(apple_quote['Close'])
+print(apple_quote["Close"])

@@ -9,12 +9,12 @@ from tabulate import tabulate
 
 from stock_predictions import ALPHA_VANTAGE_APIKEY, ROOT, TODAY_DATE
 from stock_predictions.logger import LOGGER
-from stock_predictions.utils import pretty_print_df, visualize_price_history
+from stock_predictions.utils import pretty_print_df
 
 
 class DataUtils:
     def __init__(self):
-        self.data_dir = ROOT.joinpath('data')
+        self.data_dir = ROOT.joinpath("data")
         self.data_normaliser = MinMaxScaler()
 
     @staticmethod
@@ -29,9 +29,9 @@ class DataUtils:
         :return:
         """
         assert isinstance(csv_path, Path)
-        stock_symbol = csv_path.name.split('_')[0].upper()
-        ts = TimeSeries(key=ALPHA_VANTAGE_APIKEY, output_format='pandas')
-        data, meta_data = ts.get_daily(stock_symbol, outputsize='full')
+        stock_symbol = csv_path.name.split("_")[0].upper()
+        ts = TimeSeries(key=ALPHA_VANTAGE_APIKEY, output_format="pandas")
+        data, meta_data = ts.get_daily(stock_symbol, outputsize="full")
         data.to_csv(csv_path)
 
     def get_yahoo_stock_data(self, stock_symbol, start, end):
@@ -43,12 +43,12 @@ class DataUtils:
         2019-04-03  177.960007  172.949997  174.500000  173.539993  27590100  173.539993
         2019-04-04  178.000000  175.529999  176.020004  176.020004  17847700  176.020004
         """
-        csv_path = self.data_dir / f'{stock_symbol.lower()}_quote_{TODAY_DATE}.csv'
+        csv_path = self.data_dir / f"{stock_symbol.lower()}_quote_{TODAY_DATE}.csv"
         if csv_path.exists():
             df = pd.read_csv(csv_path)
         else:
             df = pandas_datareader.DataReader(
-                name=stock_symbol, data_source='yahoo', start=start, end=end
+                name=stock_symbol, data_source="yahoo", start=start, end=end
             )
             df.to_csv(csv_path)
         LOGGER.info(
@@ -59,11 +59,11 @@ class DataUtils:
         return df
 
     def xcsv_to_dataset(self, stock, number_of_days=60, with_tech_indicator=False):
-        csv_path = self.data_dir / f'{stock.lower()}_daily.csv'
+        csv_path = self.data_dir / f"{stock.lower()}_daily.csv"
         if not csv_path.exists():
             self.alpha_vantage_get_dataset(stock, csv_path)
         data = pd.read_csv(csv_path)
-        data = data.drop('date', axis=1)
+        data = data.drop("date", axis=1)
         data = data.drop(0, axis=0)
         data = data.values
         data_normalised = self.data_normaliser.fit_transform(data)
@@ -110,16 +110,16 @@ class DataUtils:
             assert ohlcv_histories_normalised.shape[0] == technical_indicators_normalised.shape[0]
             ret_values.append(technical_indicators_normalised)
             assert len(ret_values) == 5
-        LOGGER.info(f'Returning values len: {len(ret_values)}')
+        LOGGER.info(f"Returning values len: {len(ret_values)}")
         return tuple(ret_values)
 
     def csv_to_dataset(self, csv_path, number_of_days=60, with_tech_indicator=False):
         if not csv_path.exists():
             self.alpha_vantage_get_dataset(csv_path)
         data = pd.read_csv(csv_path)
-        LOGGER.info(f'==== {csv_path.name} ====')
+        LOGGER.info(f"==== {csv_path.name} ====")
         pretty_print_df(data.tail())
-        data = data.drop('date', axis=1)
+        data = data.drop("date", axis=1)
         data = data.drop(0, axis=0)
         data = data.values
         data_normalised = self.data_normaliser.fit_transform(data)
@@ -189,11 +189,11 @@ class DataUtils:
         technical_indicators = 0
         next_day_open_values = 0
         # for csv_file_path in list(filter(lambda x: x.endswith('daily.csv'), os.listdir('data'))):
-        for csv_file_path in list(self.data_dir.glob('*_daily.csv')):
+        for csv_file_path in list(self.data_dir.glob("*_daily.csv")):
             # if not csv_file_path == test_set_name:
             if csv_file_path.name == test_set_name:
-                LOGGER.debug(f'Processing ... {csv_file_path}')
-                if type(ohlcv_histories) == int:
+                LOGGER.debug(f"Processing ... {csv_file_path}")
+                if isinstance(ohlcv_histories, int):
                     (
                         ohlcv_histories,
                         technical_indicators,
@@ -224,9 +224,9 @@ class DataUtils:
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     p = DataUtils()
     # p.csv_to_dataset(stock='TSLA', number_of_days=60)
     # p.multiple_csv_to_dataset(test_set_name=['FB', 'AAPL', 'MSFT', 'AMZN', 'GOOGL'],
 
-    p.multiple_csv_to_dataset(test_set_name='TSLA_daily.csv', number_of_days=60)
+    p.multiple_csv_to_dataset(test_set_name="TSLA_daily.csv", number_of_days=60)

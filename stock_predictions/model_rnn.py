@@ -91,7 +91,7 @@ class LstmRNN:
         self.keep_prob = tf.placeholder(tf.float32, None, name="keep_prob")
 
         # Stock symbols are mapped to integers.
-        self.symbols = tf.placeholder(tf.int32, [None, 1], name='stock_labels')
+        self.symbols = tf.placeholder(tf.int32, [None, 1], name="stock_labels")
 
         self.inputs = tf.placeholder(
             tf.float32, [None, self.num_steps, self.input_size], name="inputs"
@@ -119,7 +119,7 @@ class LstmRNN:
 
             # stock_label_embeds.shape = (batch_size, embedding_size)
             stacked_symbols = tf.tile(
-                self.symbols, [1, self.num_steps], name='stacked_stock_labels'
+                self.symbols, [1, self.num_steps], name="stacked_stock_labels"
             )
             stacked_embeds = tf.nn.embedding_lookup(self.embed_matrix, stacked_symbols)
 
@@ -233,16 +233,16 @@ class LstmRNN:
 
         global_step = 0
 
-        num_batches = sum(len(d_.train_X) for d_ in dataset_list) // config.batch_size
+        sum(len(d_.train_X) for d_ in dataset_list) // config.batch_size
         random.seed(time.time())
 
         # Select samples for plotting.
         sample_labels = list(range(min(config.sample_size, len(dataset_list))))
         sample_indices = {}
-        for l in sample_labels:
-            sym = dataset_list[l].stock_sym
+        for _label in sample_labels:
+            sym = dataset_list[_label].stock_sym
             target_indices = np.array(
-                [i for i, sym_label in enumerate(merged_test_labels) if sym_label[0] == l]
+                [i for i, sym_label in enumerate(merged_test_labels) if sym_label[0] == _label]
             )
             sample_indices[sym] = target_indices
         LOGGER.info(sample_indices)
@@ -301,7 +301,7 @@ class LstmRNN:
         return final_pred
 
     def save(self, step):
-        model_name = f'{self.model_name}.model'
+        model_name = f"{self.model_name}.model"
         self.saver.save(self.sess, os.path.join(self.model_logs_dir, model_name), global_step=step)
 
     def load(self):
@@ -326,14 +326,14 @@ class LstmRNN:
         days = list(range(len(truths)))[-200:]
 
         plt.figure(figsize=(12, 6))
-        plt.plot(days, truths, label='truth')
-        plt.plot(days, preds, label='pred')
-        plt.legend(loc='upper left', frameon=False)
+        plt.plot(days, truths, label="truth")
+        plt.plot(days, preds, label="pred")
+        plt.legend(loc="upper left", frameon=False)
         plt.xlabel("day")
         plt.ylabel("normalized price")
         plt.ylim((min(truths), max(truths)))
-        plt.grid(ls='--')
+        plt.grid(ls="--")
         if stock_sym:
             plt.title(stock_sym + " | Last %d days in test" % len(truths))
-        plt.savefig(figname, format='png', bbox_inches='tight', transparent=True)
+        plt.savefig(figname, format="png", bbox_inches="tight", transparent=True)
         plt.close()

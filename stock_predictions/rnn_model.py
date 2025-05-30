@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from datetime import datetime
+from pprint import pprint as pp
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,7 +8,7 @@ import pandas as pd
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from data_model import StockDataSet
-from keras.layers import Activation, Dense, Dropout, Input, LSTM
+from keras.layers import LSTM, Activation, Dense, Dropout, Input
 
 # from model_rnn import LstmRNN
 from tensorflow import optimizers
@@ -16,6 +17,7 @@ from tensorflow.python.keras.models import Model, model_from_json
 from stock_predictions import ROOT
 from stock_predictions.base import StockPricePrediction
 from stock_predictions.logger import LOGGER
+from stock_predictions.model_rnn import LstmRNN
 
 flags = tf.app.flags
 flags.DEFINE_integer("stock_count", 100, "Stock count [100]")
@@ -40,14 +42,14 @@ FLAGS = flags.FLAGS
 class StockPredictionRNN(StockPricePrediction):
     def __init__(
         self,
-        stock_symbol='FB',
+        stock_symbol="FB",
         start_date="2010-01-01",
         end_date=datetime.now().strftime("%Y-%m-%d"),
     ):
         super().__init__(stock_symbol, start_date, end_date)
-        self.json_model_path = self.json_model_path.with_suffix('.v3.json')
-        self.model_file_path = self.json_model_path.with_suffix('.v3.h5')
-        self.log_dir = ROOT / 'logs'
+        self.json_model_path = self.json_model_path.with_suffix(".v3.json")
+        self.model_file_path = self.json_model_path.with_suffix(".v3.h5")
+        self.log_dir = ROOT / "logs"
         self.log_dir.mkdir(exist_ok=True)
 
     def predict_price_rnn(self, epochs=50, history_points=50):
@@ -71,19 +73,19 @@ class StockPredictionRNN(StockPricePrediction):
         # Build the LSTM network model
         if self.model_file_path.exists() and self.json_model_path.exists():
             self.model = model_from_json(self.json_model_path.read_text())
-            self.model.load_weights(f'{self.model_file_path}')
-            self.model.compile(loss='mse', optimizer=optimizers.Adam(lr=0.0005))
+            self.model.load_weights(f"{self.model_file_path}")
+            self.model.compile(loss="mse", optimizer=optimizers.Adam(lr=0.0005))
         else:
-            lstm_input = Input(shape=(history_points, 5), name='lstm_input')
-            x = LSTM(units=50, name='lstm_0')(lstm_input)
-            x = Dropout(0.2, name='lstm_dropout_0')(x)
-            x = Dense(64, name='dense_0')(x)
-            x = Activation('sigmoid', name='sigmoid_0')(x)
-            x = Dense(1, name='dense_1')(x)
-            output = Activation('linear', name='linear_output')(x)
+            lstm_input = Input(shape=(history_points, 5), name="lstm_input")
+            x = LSTM(units=50, name="lstm_0")(lstm_input)
+            x = Dropout(0.2, name="lstm_dropout_0")(x)
+            x = Dense(64, name="dense_0")(x)
+            x = Activation("sigmoid", name="sigmoid_0")(x)
+            x = Dense(1, name="dense_1")(x)
+            output = Activation("linear", name="linear_output")(x)
             self.model = Model(inputs=lstm_input, outputs=output)
-            self.model.compile(loss='mse', optimizer=optimizers.Adam(lr=0.0005))
-            LOGGER.info('Building V2 LSTM Stock Prediction Model')
+            self.model.compile(loss="mse", optimizer=optimizers.Adam(lr=0.0005))
+            LOGGER.info("Building V2 LSTM Stock Prediction Model")
             self.model.summary()
             # if you need to visualize the model layers
             # plot_model(self.model, to_file=f"{self.model_file_path.with_suffix('.jpg')}")
@@ -96,9 +98,9 @@ class StockPredictionRNN(StockPricePrediction):
                 validation_split=0.1,
             )
             self.json_model_path.write_text(self.model.to_json())
-            self.model.save_weights(filepath=f'{self.model_file_path}')
+            self.model.save_weights(filepath=f"{self.model_file_path}")
         scores = self.model.evaluate(ohlcv_test, y_test)
-        LOGGER.debug(f'Scores: {scores}')
+        LOGGER.debug(f"Scores: {scores}")
 
         y_test_predicted = self.model.predict(ohlcv_test)
         y_test_predicted = y_normaliser.inverse_transform(y_test_predicted)
@@ -111,11 +113,11 @@ class StockPredictionRNN(StockPricePrediction):
         scaled_mse = real_mse / (np.max(unscaled_y_test) - np.min(unscaled_y_test)) * 100
         LOGGER.info(scaled_mse)
         plt.gcf().set_size_inches(22, 15, forward=True)
-        plt.xlabel('Date', fontsize=18)
-        plt.ylabel('Close Price USD ($)', fontsize=18)
-        plt.plot(unscaled_y_test[0:-1], label='real')
-        plt.plot(y_test_predicted[0:-1], label='predicted')
-        plt.legend(['Real', 'Predicted'])
+        plt.xlabel("Date", fontsize=18)
+        plt.ylabel("Close Price USD ($)", fontsize=18)
+        plt.plot(unscaled_y_test[0:-1], label="real")
+        plt.plot(y_test_predicted[0:-1], label="predicted")
+        plt.legend(["Real", "Predicted"])
         # plt.show()
 
     def show_all_variables(self):
@@ -130,22 +132,22 @@ class StockPredictionRNN(StockPricePrediction):
                 )
             ]
         # Load metadata of s & p 500 stocks
-        data = pd.read_csv(self.data_dir.joinpath('constituents-financials.csv'))
-        data = data.rename(columns={col: col.lower().replace(' ', '_') for col in data.columns})
-        data['file_exists'] = data['symbol'].map(lambda x: ROOT.joinpath(f"data/{x}.csv").exists())
-        LOGGER.info(data['file_exists'].value_counts().to_dict())
+        data = pd.read_csv(self.data_dir.joinpath("constituents-financials.csv"))
+        data = data.rename(columns={col: col.lower().replace(" ", "_") for col in data.columns})
+        data["file_exists"] = data["symbol"].map(lambda x: ROOT.joinpath(f"data/{x}.csv").exists())
+        LOGGER.info(data["file_exists"].value_counts().to_dict())
 
-        data = data[data['file_exists'] is True].reset_index(drop=True)
-        data = data.sort('market_cap', ascending=False).reset_index(drop=True)
+        data = data[data["file_exists"] is True].reset_index(drop=True)
+        data = data.sort("market_cap", ascending=False).reset_index(drop=True)
         if k is not None:
             data = data.head(k)
         LOGGER.info(f"Head of S&P 500 info:\n{data.head()}")
         # Generate embedding meta file
-        data[['symbol', 'sector']].to_csv(
-            self.log_dir.joinpath("metadata.tsv"), sep='\t', index=False
+        data[["symbol", "sector"]].to_csv(
+            self.log_dir.joinpath("metadata.tsv"), sep="\t", index=False
         )
         return [
-            StockDataSet(row['symbol'], input_size=input_size, num_steps=num_steps, test_ratio=0.05)
+            StockDataSet(row["symbol"], input_size=input_size, num_steps=num_steps, test_ratio=0.05)
             for _, row in data.iterrows()
         ]
 
@@ -183,5 +185,5 @@ class StockPredictionRNN(StockPricePrediction):
                     raise Exception("[!] Train a model first, then run test mode")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tf.app.run()

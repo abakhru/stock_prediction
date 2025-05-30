@@ -21,8 +21,8 @@ secondDate = "2019-12-02"
 endDate = datetime.date.today()
 
 # src https://drive.google.com/file/d/1skgUviLX-Zby_qyCSBLaEeMGxFBXvM8f/view
-stock_symbols = ' '.join(Path(__file__).parent.joinpath('stock_symbols.txt').read_text().rsplit())
-blueCategory = ' '.join(Path(__file__).parent.joinpath('blue_categories.txt').read_text().rsplit())
+stock_symbols = " ".join(Path(__file__).parent.joinpath("stock_symbols.txt").read_text().rsplit())
+blueCategory = " ".join(Path(__file__).parent.joinpath("blue_categories.txt").read_text().rsplit())
 
 
 class StockResult:
@@ -45,7 +45,7 @@ def get_bankruptcy_probability(symbol):
         )
         tree = html.fromstring(page.content)
         bankruptcy_probability = tree.xpath(
-            "//div[contains(@class, " "\'importantValue\')]/text()"
+            "//div[contains(@class, " "'importantValue')]/text()"
         )[0]
     except Exception as _:
         bankruptcy_probability = "unknown"
@@ -54,19 +54,19 @@ def get_bankruptcy_probability(symbol):
 
 @limits(calls=1, period=1)  # slow down for rate limiting
 def get_all_stocks_data():
-    data_csv_path = ROOT.joinpath('data', f'stocks_data_{TODAY_DATE}.csv')
+    data_csv_path = ROOT.joinpath("data", f"stocks_data_{TODAY_DATE}.csv")
     if data_csv_path.exists():
         data = pd.read_csv(data_csv_path)
     else:
-        LOGGER.info('Downloading all stocks values')
+        LOGGER.info("Downloading all stocks values")
         # data = yf.download(tickers=stock_symbols, start=firstDate, end=endDate)
-        data = yf.download(tickers='FB', start=firstDate, end=endDate)
+        data = yf.download(tickers="FB", start=firstDate, end=endDate)
         data.to_csv(data_csv_path)
     pretty_print_df(data)
     return data
 
 
-results_file_name = Path(__file__).parent.resolve().joinpath('docs', 'index.html')
+results_file_name = Path(__file__).parent.resolve().joinpath("docs", "index.html")
 if results_file_name.exists():
     results_file_name.unlink()
 
@@ -89,16 +89,16 @@ stock_results.sort(key=lambda x: x.second_percentage_movement)
 heading = (
     f'<h1>Diff generated at ' f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} UTC</h1> \n'
 )
-tableBody = ''
+tableBody = ""
 
 for result in stock_results:
     first_percentage_movementClass = (
-        'positive-movement' if (result.first_percentage_movement > 0) else 'negative-movement'
+        "positive-movement" if (result.first_percentage_movement > 0) else "negative-movement"
     )
     second_percentage_movementClass = (
-        'positive-movement' if (result.second_percentage_movement > 0) else 'negative-movement'
+        "positive-movement" if (result.second_percentage_movement > 0) else "negative-movement"
     )
-    categoriesClasses = 'blue-category' if (result.stock_symbol in blueCategory) else ''
+    categoriesClasses = "blue-category" if (result.stock_symbol in blueCategory) else ""
 
     tableBody += "<tr class='{}'> \n".format(categoriesClasses)
     tableBody += '<td><button onclick="renderChart(`{}`)">{}</button></td> \n'.format(
