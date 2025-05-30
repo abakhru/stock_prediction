@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "LSTM Model based stock price prediction"
 readme = "README.md"
 authors = [{name = "Amit Bakhru", email = "bakhru@me.com"}]
-license = {text = "MIT"}
+license = "MIT"
 keywords = ["stock_predictions"]
 requires-python = ">=3.9"
 dependencies = [
@@ -28,7 +28,6 @@ dependencies = [
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9"
@@ -49,3 +48,6 @@ select = ["E", "F", "Q", "I"]
 inline-quotes = "double"
 multiline-quotes = "double"
 docstring-quotes = "double"
+
+[tool.setuptools.packages.find]
+where = ["stock_predictions"]

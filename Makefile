@@ -18,11 +18,7 @@ venv:
 
 ## make clean
 clean:
-	rm -rf build/
-	rm -rf dist/
-	rm -rf .eggs/
-	find . -name '*.egg-info' -exec rm -rf {} +
-	find . -name '*.egg' -exec rm -f {} +
+	rm -rf build/ .ruff_cache/ dist/ .eggs/ .pytest_cache/ .coverage .coverage.*
 
 ## lint python files using Ruff
 lint:
